@@ -95,8 +95,12 @@ docs/
 - [x] **T005** Create Supabase database schema with all 5 entities from data-model.md
 
   - **Constitutional**: Data privacy with Row-Level Security policies
-  - **Deliverables**: `supabase/migrations/001_initial_schema.sql`
+  - **Deliverables**: `supabase/migrations/001_initial_schema.sql` (updated for production compatibility)
   - **Entities**: User, Classification, Waste_Category, Waste_Facility, Waste_Facility_Category
+  - **Schema Updates**:
+    1. Removed `education_content` from waste_categories (now generated dynamically)
+    2. Made `address` optional and `city` default to 'Jakarta' for CSV import compatibility
+    3. Users table correctly extends Supabase auth.users (email/password handled by Supabase Auth)
   - **Dependencies**: T002 (Supabase setup)
 
 - [x] **T006** [P] Implement RLS policies for user data protection and admin access control
@@ -108,8 +112,9 @@ docs/
 
 - [x] **T007** [P] Seed database with initial waste category data (Organik, Anorganik, Lainnya)
 
-  - **Deliverables**: `supabase/seed.sql` with category definitions and education content
+  - **Deliverables**: `supabase/seed.sql` with category definitions (education content now generated dynamically)
   - **Content**: Indonesian language disposal guidance for Jakarta context
+  - **Updated**: Removed static education_content, now uses dynamic generation via education-generator.ts
   - **Dependencies**: T005 (schema created)
 
 - [x] **T008** [P] Create database performance indexes for geospatial queries and user history
@@ -169,55 +174,71 @@ docs/
 
 ## Phase 3.4: API Implementation (Manual Testing Approach)
 
-- [ ] **T016** Implement POST /api/auth/register in `frontend/src/app/api/auth/register/route.ts`
+- [x] **T016** Implement POST /api/auth/register in `frontend/src/app/api/auth/register/route.ts`
 
   - **Constitutional**: Data privacy compliance with minimal data collection
   - **Features**: Supabase Auth integration, validation, email verification
   - **Manual Testing**: Test registration through UI forms and browser dev tools
   - **Dependencies**: T002 (Supabase), T005 (schema)
 
-- [ ] **T017** Implement POST /api/auth/login in `frontend/src/app/api/auth/login/route.ts`
+- [x] **T017** Implement POST /api/auth/login in `frontend/src/app/api/auth/login/route.ts`
 
   - **Features**: Session management, role-based access control
   - **Manual Testing**: Test login flow through UI and verify session management
   - **Dependencies**: T002 (Supabase), T005 (schema)
 
-- [ ] **T018** Implement GET /api/auth/session in `frontend/src/app/api/auth/session/route.ts`
+- [x] **T018** Implement GET /api/auth/session in `frontend/src/app/api/auth/session/route.ts`
 
   - **Features**: Session validation, user context retrieval
   - **Manual Testing**: Verify session handling across page refreshes
   - **Dependencies**: T002 (Supabase), T017 (login implementation)
 
-- [ ] **T019** Implement POST /api/classify in `frontend/src/app/api/classify/route.ts`
+- [x] **T019** Implement POST /api/classify in `frontend/src/app/api/classify/route.ts`
 
   - **Constitutional**: Performance target <3 seconds, mobile-optimized image processing
-  - **Features**: Local image validation (file type, size, format) before ML service integration, confidence scoring
-  - **Local Processing**: First-gate validation (PNG/JPEG/WebP formats, 10MB limit, basic image checks) before sending to ML service
+  - **Features**: Local image validation, ML service integration, **dynamic education content generation**
+  - **Education**: Uses `education-generator.ts` for contextual recommendations based on classification results
+  - **Status**: COMPLETED - Dynamic education system implemented, static education_content removed
   - **Manual Testing**: Upload various image types and monitor network performance
-  - **Dependencies**: T002 (Supabase), T003 (ML service)
+  - **Dependencies**: T002 (Supabase), T003 (ML service), T007 (education generator)
 
-- [ ] **T020** Implement GET /api/classifications in `frontend/src/app/api/classifications/route.ts`
+- [x] **T020** Implement GET /api/classifications in `frontend/src/app/api/classifications/route.ts`
 
   - **Constitutional**: User data privacy with RLS enforcement
   - **Features**: User history pagination, image URL generation
   - **Manual Testing**: Test history display with multiple users and pagination
   - **Dependencies**: T006 (RLS policies)
 
-- [ ] **T021** [P] Implement GET /api/admin/analytics in `frontend/src/app/api/admin/analytics/route.ts`
+- [x] **T020a** [P] Import CSV facility data (4160+ records) into waste_facilities table
+
+  - **Data Source**: CSV with columns: nama, facility_name, facility_type, longitude, latitude
+  - **Import Strategy**: Address/city optional (set city='Jakarta', address=null initially)
+  - **Status**: COMPLETED - 4160+ facilities successfully imported
+  - **Integration**: All-in-one seed.sql includes facility-category relationships
+  - **Dependencies**: T005 (schema fixes)
+
+- [x] **T021** [P] Implement GET /api/admin/analytics in `frontend/src/app/api/admin/analytics/route.ts`
 
   - **Features**: Classification statistics, user metrics, system analytics
+  - **Status**: COMPLETED - Admin analytics with comprehensive dashboard metrics
+  - **Implementation**: Classification stats, user metrics, facility analytics, performance monitoring
   - **Manual Testing**: Test admin dashboard with different user roles
   - **Dependencies**: T006 (RLS policies)
 
-- [ ] **T022** [P] Implement GET /api/facilities in `frontend/src/app/api/facilities/route.ts`
+- [x] **T022** [P] Implement GET /api/facilities in `frontend/src/app/api/facilities/route.ts`
 
   - **Features**: Geospatial queries, facility filtering, waste type matching
+  - **Status**: COMPLETED - Geospatial facility discovery with 4160+ Jakarta facilities
+  - **Implementation**: Location-based search, distance filtering, facility type/category filtering
+  - **Data**: Works with imported CSV data (4160 facilities)
   - **Manual Testing**: Test facility map filtering and search functionality
-  - **Dependencies**: T007 (seed data), T008 (indexes)
+  - **Dependencies**: T020a (CSV import), T008 (indexes)
 
-- [ ] **T023** [P] Implement DELETE /api/user/profile in `frontend/src/app/api/user/profile/route.ts`
+- [x] **T023** [P] Implement DELETE /api/user/profile in `frontend/src/app/api/user/profile/route.ts`
   - **Constitutional**: Complete data deletion rights with audit trail
   - **Features**: Cascade deletion, image cleanup, user consent validation
+  - **Status**: COMPLETED - Complete user account deletion with audit trail and cleanup
+  - **Implementation**: Cascade deletion, image storage cleanup, data backup, audit logging
   - **Manual Testing**: Test account deletion and verify complete data removal
   - **Dependencies**: T006 (RLS policies)
 
