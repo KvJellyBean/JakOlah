@@ -1,4 +1,4 @@
--- JakOlah Performance Indexes
+-- JakOlah Performance Indexes (FIXED VERSION 2)
 -- Migration: 003_performance_indexes.sql  
 -- Created: 2025-09-25
 -- Purpose: Optimize queries for classification history, facility mapping, and analytics
@@ -70,51 +70,34 @@ CREATE INDEX idx_audit_logs_table_record ON public.audit_logs(table_name, record
 CREATE INDEX idx_audit_logs_user_date ON public.audit_logs(user_id, created_at DESC);
 CREATE INDEX idx_audit_logs_action ON public.audit_logs(action);
 
--- Partial indexes for optimization
--- Only index recent classifications (last 6 months for performance)
-CREATE INDEX idx_classifications_recent ON public.classifications(user_id, created_at DESC)
-WHERE created_at >= NOW() - INTERVAL '6 months';
+-- Simple indexes without time predicates to avoid immutable function errors
+CREATE INDEX idx_classifications_recent ON public.classifications(user_id, created_at DESC);
 
--- Index only facilities within Jakarta bounds (performance optimization)
+-- Index only facilities within Jakarta bounds (using static coordinates)
 CREATE INDEX idx_facilities_jakarta ON public.waste_facilities(facility_type, latitude, longitude)
 WHERE latitude BETWEEN -6.4 AND -6.0 AND longitude BETWEEN 106.5 AND 107.2;
 
--- Statistics and analytics indexes
--- Monthly classification counts (for dashboard charts)
-CREATE INDEX idx_classifications_monthly_stats ON public.classifications(
-    DATE_TRUNC('month', created_at),
-    waste_category_id
-);
+-- Basic created_at indexes for time-based queries (without DATE_TRUNC)
+CREATE INDEX idx_classifications_created_at ON public.classifications(created_at DESC);
+CREATE INDEX idx_classifications_category_created ON public.classifications(waste_category_id, created_at DESC);
 
--- Daily classification counts (for real-time monitoring)  
-CREATE INDEX idx_classifications_daily_stats ON public.classifications(
-    DATE_TRUNC('day', created_at),
-    waste_category_id
-);
-
--- User activity tracking
-CREATE INDEX idx_users_last_activity ON public.users(updated_at DESC) 
-WHERE updated_at >= NOW() - INTERVAL '30 days';
-
--- Performance monitoring queries
--- Add index for image size analysis (if needed later)
--- CREATE INDEX idx_classifications_image_size ON public.classifications(
---     (length(image_path))  -- Can be used to analyze image storage usage
--- );
+-- User activity tracking (simplified)
+CREATE INDEX idx_users_last_activity ON public.users(updated_at DESC);
 
 -- Comments for documentation
 COMMENT ON INDEX idx_classifications_user_created IS 'Primary index for user classification history pagination';
 COMMENT ON INDEX idx_facilities_location IS 'PostGIS spatial index for geospatial facility queries';
 COMMENT ON INDEX idx_classifications_low_confidence IS 'Partial index for analyzing classifications with confidence < 70%';
 COMMENT ON INDEX idx_facilities_jakarta IS 'Partial index limited to Jakarta geographic bounds for performance';
-COMMENT ON INDEX idx_classifications_recent IS 'Partial index for recent classifications (last 6 months) to improve query performance';
+COMMENT ON INDEX idx_classifications_recent IS 'Primary index for recent classifications query performance';
+COMMENT ON INDEX idx_classifications_created_at IS 'Index for time-based classification queries';
 
 -- Index usage monitoring views (for database optimization)
 CREATE OR REPLACE VIEW public.index_usage_stats AS
 SELECT 
     schemaname,
-    tablename,
-    indexname,
+    relname as tablename,
+    indexrelname as indexname,
     idx_scan as index_scans,
     idx_tup_read as tuples_read,
     idx_tup_fetch as tuples_fetched
@@ -122,9 +105,3 @@ FROM pg_stat_user_indexes
 ORDER BY idx_scan DESC;
 
 COMMENT ON VIEW public.index_usage_stats IS 'Monitor index usage for performance optimization';
-
--- Database maintenance recommendations
--- VACUUM and ANALYZE should be run regularly on these tables:
--- VACUUM ANALYZE public.classifications;  -- High write volume
--- VACUUM ANALYZE public.waste_facilities;  -- Location queries  
--- REINDEX CONCURRENTLY idx_facilities_location;  -- Monthly maintenance for geospatial index
