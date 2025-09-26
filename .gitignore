@@ -146,6 +146,9 @@ coverage/
 # Sphinx documentation
 docs/_build/
 
+# ===== GITHUB INTERNAL =====
+.github/
+
 # Classification results cache
 classification_cache/
 temp_classifications/
