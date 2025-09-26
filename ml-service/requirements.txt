@@ -1,0 +1,23 @@
+# FastAPI ML Service for JakOlah Jakarta Waste Classification
+# Core dependencies
+fastapi==0.115.6
+uvicorn==0.32.1
+python-multipart==0.0.19
+pydantic==2.10.4
+
+# ML and Computer Vision
+torch==2.5.1
+torchvision==0.20.1
+pillow==11.0.0
+opencv-python==4.10.0.84
+numpy==2.2.1
+scikit-learn==1.6.0
+
+# Image processing and utilities
+tensorflow==2.18.0
+keras==3.8.0
+joblib==1.4.2
+
+# Development and utilities
+python-dotenv==1.0.1
+typing-extensions==4.12.2
