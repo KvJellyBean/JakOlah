@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "../../../lib/supabase";
+import {
+  generateEducationContent,
+  generateConfidenceRecommendation,
+} from "../../../lib/education-generator";
 
 // ML Service URL - in production this would be from environment variables
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL || "http://localhost:8001";
@@ -42,6 +46,10 @@ const ML_SERVICE_URL = process.env.ML_SERVICE_URL || "http://localhost:8001";
  *   recommendations: {
  *     disposal_guidance: string;
  *     education_content: string;
+ *     local_facilities: string[];
+ *     tips: string[];
+ *     confidence_recommendation: string;
+ *     confidence_note?: string;
  *   };
  *   nearby_facilities: Array<{...}>;
  *   processing_time: number;
@@ -62,28 +70,6 @@ const CATEGORY_CODES = {
   Organik: "ORG" as const,
   Anorganik: "ANO" as const,
   Lainnya: "LAI" as const,
-};
-
-// Educational content and disposal guidance
-const RECOMMENDATIONS = {
-  Organik: {
-    disposal_guidance:
-      "Sampah organik dapat dikompos atau dibuang ke TPS terdekat. Pastikan sampah dalam kondisi kering untuk mengurangi bau dan lalat.",
-    education_content:
-      "Sampah organik seperti sisa makanan, daun, dan kulit buah dapat diolah menjadi kompos yang berguna untuk tanaman. Jakarta mendorong pengomposan skala rumah tangga.",
-  },
-  Anorganik: {
-    disposal_guidance:
-      "Sampah anorganik harus dipilah terlebih dahulu. Plastik, kertas, dan logam yang masih bisa didaur ulang sebaiknya diserahkan ke Bank Sampah terdekat.",
-    education_content:
-      "Sampah anorganik seperti plastik, kertas, dan kaleng memerlukan waktu lama untuk terurai. Dengan memilah sampah, Anda membantu program daur ulang Jakarta.",
-  },
-  Lainnya: {
-    disposal_guidance:
-      "Sampah jenis ini memerlukan penanganan khusus. Konsultasikan dengan petugas TPS terdekat atau hubungi layanan Jaklingko untuk panduan disposal.",
-    education_content:
-      "Beberapa jenis sampah memerlukan penanganan khusus seperti sampah elektronik, bahan kimia, atau sampah medis. Pemerintah DKI Jakarta menyediakan fasilitas khusus untuk jenis sampah ini.",
-  },
 };
 
 export async function POST(request: NextRequest) {
@@ -263,6 +249,23 @@ export async function POST(request: NextRequest) {
 
     const processingTime = Date.now() - startTime;
 
+    // Generate dynamic education content based on classification result
+    const educationContent = generateEducationContent({
+      categoryCode: CATEGORY_CODES[category],
+      confidence,
+      allConfidences: {
+        organik: scores.organik,
+        anorganik: scores.anorganik,
+        lainnya: scores.lainnya,
+      },
+    });
+
+    const confidenceRecommendation = generateConfidenceRecommendation({
+      organik: scores.organik,
+      anorganik: scores.anorganik,
+      lainnya: scores.lainnya,
+    });
+
     // Return complete classification response
     return NextResponse.json({
       classification_id: classification.classification_id,
@@ -277,7 +280,14 @@ export async function POST(request: NextRequest) {
         anorganik: scores.anorganik,
         lainnya: scores.lainnya,
       },
-      recommendations: RECOMMENDATIONS[category],
+      recommendations: {
+        disposal_guidance: educationContent.disposal_guidance,
+        education_content: educationContent.environmental_impact,
+        local_facilities: educationContent.local_facilities,
+        tips: educationContent.tips,
+        confidence_recommendation: confidenceRecommendation,
+        confidence_note: educationContent.confidence_note,
+      },
       nearby_facilities: nearbyFacilities,
       processing_time: processingTime,
       created_at: classification.created_at,
