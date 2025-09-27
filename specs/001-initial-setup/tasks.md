@@ -123,54 +123,9 @@ docs/
   - **Indexes**: user+timestamp, facility coordinates, classification analytics
   - **Dependencies**: T005 (schema created)
 
-## Phase 3.3: Manual Testing & Optional Contract Tests
+## Phase 3.3: Testing Approach
 
-**NOTE: Testing is manual-first approach. Contract tests are optional for future expansion.**
-
-- [ ] **T009** [P] [OPTIONAL] Contract test POST /api/auth/register in `frontend/tests/contract/auth.test.ts`
-
-  - **Constitutional**: Data privacy validation in registration flow
-  - **Test Cases**: Valid registration, validation errors, duplicate email
-  - **Manual Testing**: Use browser dev tools and registration form directly
-  - **Dependencies**: T001 (Next.js setup)
-
-- [ ] **T010** [P] [OPTIONAL] Contract test POST /api/auth/login in `frontend/tests/contract/auth.test.ts`
-
-  - **Test Cases**: Valid login, invalid credentials, email verification required
-  - **Manual Testing**: Use login form and browser dev tools for validation
-  - **Dependencies**: T001 (Next.js setup)
-
-- [ ] **T011** [P] [OPTIONAL] Contract test POST /api/classify in `frontend/tests/contract/classification.test.ts`
-
-  - **Constitutional**: Performance validation (<3 second response time)
-  - **Test Cases**: Valid image upload, format validation, size limits, ML response format
-  - **Manual Testing**: Upload images through classification interface, monitor network tab
-  - **Dependencies**: T001 (Next.js setup)
-
-- [ ] **T012** [P] [OPTIONAL] Contract test GET /api/classifications in `frontend/tests/contract/classification.test.ts`
-
-  - **Constitutional**: User data privacy - only own classification history
-  - **Test Cases**: User history pagination, access control, empty results
-  - **Manual Testing**: Check account page classification history with multiple users
-  - **Dependencies**: T001 (Next.js setup)
-
-- [ ] **T013** [P] [OPTIONAL] Contract test GET /api/admin/analytics in `frontend/tests/contract/admin.test.ts`
-
-  - **Test Cases**: Admin-only access, analytics data format, user role validation
-  - **Manual Testing**: Test admin dashboard with different user roles
-  - **Dependencies**: T001 (Next.js setup)
-
-- [ ] **T014** [P] [OPTIONAL] Contract test GET /api/facilities in `frontend/tests/contract/facilities.test.ts`
-
-  - **Test Cases**: Public facility access, geospatial filtering, facility types
-  - **Manual Testing**: Use browser to test facility map and filtering
-  - **Dependencies**: T001 (Next.js setup)
-
-- [ ] **T015** [P] [OPTIONAL] Contract test DELETE /api/user/profile in `frontend/tests/contract/user.test.ts`
-  - **Constitutional**: Complete data deletion rights (FR-014)
-  - **Test Cases**: Account deletion, data cascade, admin access denied
-  - **Manual Testing**: Test account deletion flow through UI, verify data removal
-  - **Dependencies**: T001 (Next.js setup)
+**NOTE: Using manual testing approach through browser dev tools and direct UI interaction for validation.**
 
 ## Phase 3.4: API Implementation (Manual Testing Approach)
 
@@ -244,33 +199,36 @@ docs/
 
 ## Phase 3.5: ML Inference Service Implementation (Using Your Trained Models)
 
-- [ ] **T024** Implement image preprocessing pipeline in `ml-service/src/models/preprocessor.py`
+- [x] **T024** Implement image preprocessing pipeline in `ml-service/src/models/preprocessor.py`
 
   - **Constitutional**: Performance optimization for mobile image processing
   - **Features**: Image preprocessing matching your training pipeline (01-preprocessing.ipynb approach)
   - **Input**: Raw image from frontend (JPEG/PNG)
   - **Output**: Preprocessed image tensor ready for CNN feature extraction
   - **Pipeline**: Resize, normalize, convert to tensor format compatible with your trained models
+  - **Status**: COMPLETED - Full preprocessing pipeline with validation and performance optimization
   - **Dependencies**: T003 (FastAPI structure)
 
-- [ ] **T025** Implement CNN feature extraction in `ml-service/src/models/feature_extractor.py`
+- [x] **T025** Implement CNN feature extraction in `ml-service/src/models/feature_extractor.py`
 
   - **Features**: CNN feature extraction using ResNet50 and MobileNetV3 (matching 02-feature-extraction.ipynb)
   - **Models**: Load pretrained CNN models (ResNet50/MobileNetV3) for feature extraction
   - **Output**: Feature vectors compatible with your trained SVM models
   - **Performance**: Optimize for inference speed, batch processing capability
+  - **Status**: COMPLETED - Full CNN feature extraction with both ResNet50 and MobileNetV3 support
   - **Dependencies**: T024 (preprocessing)
 
-- [ ] **T026** Implement SVM inference in `ml-service/src/models/classifier.py`
+- [x] **T026** Implement SVM inference in `ml-service/src/models/classifier.py`
 
   - **Features**: Load your trained SVM models from model-result/\*.pkl files
   - **Models**: MobileNetV3_poly_model.pkl, MobileNetV3_rbf_model.pkl, ResNet50_poly_model.pkl, ResNet50_rbf_model.pkl
   - **Input**: CNN feature vectors from T025
   - **Output**: Classification (Organik/Anorganik/Lainnya) with confidence scores
   - **Model Selection**: Logic to choose best performing model or ensemble approach
+  - **Status**: COMPLETED - Full SVM classifier with model loading, ensemble support, and confidence scoring
   - **Dependencies**: T025 (feature extraction)
 
-- [ ] **T027** Implement POST /classify endpoint in `ml-service/src/api/classification.py`
+- [x] **T027** Implement POST /classify endpoint in `ml-service/src/api/classification.py`
 
   - **Constitutional**: Performance <3 seconds total processing time
   - **Features**: Complete inference pipeline integration (preprocess → extract → classify)
@@ -279,12 +237,14 @@ docs/
   - **Validation**: Accept all images, process through your CNN-SVM pipeline, accept bias as research limitation
   - **Logging**: Basic classification logging (timestamp, image info, classification result, confidence) for debugging/tracking
   - **Error Handling**: Graceful degradation for service failures
+  - **Status**: COMPLETED - Full API endpoint with health checks, benchmarking, and model info endpoints
   - **Dependencies**: T026 (SVM inference)
 
-- [ ] **T051** [P] Implement comprehensive logging system in `ml-service/src/utils/logger.py`
+- [x] **T051** [P] Implement comprehensive logging system in `ml-service/src/utils/logger.py`
   - **Features**: Classification attempt logging, error tracking, performance monitoring
   - **Logging Details**: Request timestamp, image metadata (size, format), processing time, confidence scores, classification results, error messages
   - **Storage**: Log files with rotation, optional database logging for analytics
+  - **Status**: COMPLETED - Full logging system with request tracking, performance monitoring, and error handling
   - **Dependencies**: T003 (FastAPI structure)
 
 ## Phase 3.6: Frontend Components (Based on Existing UI/Figma Designs)
