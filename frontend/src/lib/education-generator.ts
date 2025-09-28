@@ -82,7 +82,7 @@ export function generateEducationContent(
 
     case "LAI":
       return {
-        category: "Sampah Khusus/B3",
+        category: "Sampah Lainnya",
         disposal_guidance:
           "Sampah kategori lainnya memerlukan penanganan khusus. JANGAN dicampur dengan sampah biasa karena dapat berbahaya.",
         local_facilities: [
