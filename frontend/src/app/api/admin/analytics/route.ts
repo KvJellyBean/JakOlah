@@ -211,6 +211,7 @@ export async function GET(request: NextRequest) {
       generated_at: new Date().toISOString(),
     });
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.warn("Admin analytics error:", error);
     return NextResponse.json(
       {

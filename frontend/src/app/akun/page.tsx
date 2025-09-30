@@ -51,9 +51,11 @@ export default function AkunPage() {
     },
   ];
 
-  const handleSaveSettings = async (_data: ProfileSettingsData) => {
+  const handleSaveSettings = async (data: ProfileSettingsData) => {
     // Implement save settings logic
     // TODO: Save settings data to backend
+    // eslint-disable-next-line no-console
+    console.log("Settings to save:", data);
     await new Promise(resolve => setTimeout(resolve, 1000));
   };
 

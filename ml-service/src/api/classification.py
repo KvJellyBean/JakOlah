@@ -21,58 +21,19 @@ router = APIRouter(prefix="/api", tags=["classification"])
 # Initialize logger
 logger = get_logger()
 
-@router.post("/classify")
-async def classify_image(
+@router.post("/predict")
+async def predict_image(
     request: Request,
-    file: UploadFile = File(...),
+    image: UploadFile = File(...),
     model_name: Optional[str] = None,
     use_ensemble: bool = False
 ):
     """
-    Classify waste image using trained ML models.
+    Predict waste category from image - Frontend compatible endpoint.
     
-    Complete inference pipeline: preprocess → extract → classify
-    
-    Args:
-        file: Image file (JPEG/PNG)
-        model_name: Specific SVM model to use (optional)
-                   Options: mobilenetv3_poly, mobilenetv3_rbf, resnet50_poly, resnet50_rbf
-        use_ensemble: Whether to use ensemble prediction (default: False)
-    
-    Returns:
-        JSON response with classification results:
-        {
-            "success": true,
-            "request_id": "uuid",
-            "prediction": "Organik|Anorganik|Lainnya",
-            "confidence": 0.95,
-            "probabilities": {
-                "Organik": 0.95,
-                "Anorganik": 0.03,
-                "Lainnya": 0.02
-            },
-            "model_info": {
-                "model_used": "resnet50_rbf",
-                "cnn_backbone": "resnet50",
-                "svm_kernel": "rbf"
-            },
-            "processing_time": {
-                "total": 1.234,
-                "preprocessing": 0.123,
-                "feature_extraction": 0.891,
-                "classification": 0.020,
-                "validation": 0.200
-            },
-            "image_metadata": {
-                "format": "JPEG",
-                "size": [1024, 768],
-                "file_size": 102400
-            }
-        }
+    This endpoint provides a simplified response format for frontend integration.
     """
     request_id = create_request_id()
-    processing_times = {}
-    image_metadata = {}
     
     # Log API request
     client_ip = request.client.host if request.client else None
@@ -80,11 +41,56 @@ async def classify_image(
     
     logger.log_api_request(
         method="POST",
-        endpoint="/api/classify",
+        endpoint="/predict",
         request_id=request_id,
         client_ip=client_ip,
         user_agent=user_agent
     )
+    
+    try:
+        # Use the main classification logic
+        result = await classify_image_internal(image, model_name, use_ensemble, request_id)
+        
+        # Convert to frontend-compatible format
+        simplified_response = {
+            "category": result["prediction"],
+            "confidence": result["confidence"],
+            "scores": {
+                "organik": result["probabilities"]["Organik"],
+                "anorganik": result["probabilities"]["Anorganik"], 
+                "lainnya": result["probabilities"]["Lainnya"]
+            },
+            "processing_time": result["processing_time"]["total"],
+            "model_used": result["model_info"]["model_used"],
+            "request_id": result["request_id"]
+        }
+        
+        return JSONResponse(content=simplified_response)
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        logger.log_error("predict_endpoint", e, {"request_id": request_id})
+        raise HTTPException(
+            status_code=500,
+            detail=f"Prediction failed: {str(e)}"
+        )
+
+async def classify_image_internal(
+    file: UploadFile,
+    model_name: Optional[str] = None,
+    use_ensemble: bool = False,
+    request_id: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Internal classification logic shared between /classify and /predict endpoints.
+    """
+    if not request_id:
+        request_id = create_request_id()
+        
+    processing_times = {}
+    image_metadata = {}
     
     try:
         # Validate file
@@ -205,7 +211,7 @@ async def classify_image(
         if total_time > 3.0:
             logger.main_logger.warning(f"Classification time exceeded target: {total_time:.3f}s > 3.0s")
         
-        return JSONResponse(content=response_data)
+        return response_data
         
     except HTTPException:
         # Re-raise HTTP exceptions as-is
@@ -233,6 +239,85 @@ async def classify_image(
         )
         
         # Return error response
+        raise HTTPException(
+            status_code=500,
+            detail=f"Classification failed: {str(e)}"
+        )
+
+@router.post("/classify")
+async def classify_image(
+    request: Request,
+    file: UploadFile = File(...),
+    model_name: Optional[str] = None,
+    use_ensemble: bool = False
+):
+    """
+    Classify waste image using trained ML models.
+    
+    Complete inference pipeline: preprocess → extract → classify
+    
+    Args:
+        file: Image file (JPEG/PNG)
+        model_name: Specific SVM model to use (optional)
+                   Options: mobilenetv3_poly, mobilenetv3_rbf, resnet50_poly, resnet50_rbf
+        use_ensemble: Whether to use ensemble prediction (default: False)
+    
+    Returns:
+        JSON response with classification results:
+        {
+            "success": true,
+            "request_id": "uuid",
+            "prediction": "Organik|Anorganik|Lainnya",
+            "confidence": 0.95,
+            "probabilities": {
+                "Organik": 0.95,
+                "Anorganik": 0.03,
+                "Lainnya": 0.02
+            },
+            "model_info": {
+                "model_used": "resnet50_rbf",
+                "cnn_backbone": "resnet50",
+                "svm_kernel": "rbf"
+            },
+            "processing_time": {
+                "total": 1.234,
+                "preprocessing": 0.123,
+                "feature_extraction": 0.891,
+                "classification": 0.020,
+                "validation": 0.200
+            },
+            "image_metadata": {
+                "format": "JPEG",
+                "size": [1024, 768],
+                "file_size": 102400
+            }
+        }
+    """
+    request_id = create_request_id()
+    
+    # Log API request
+    client_ip = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent")
+    
+    logger.log_api_request(
+        method="POST",
+        endpoint="/api/classify",
+        request_id=request_id,
+        client_ip=client_ip,
+        user_agent=user_agent
+    )
+    
+    try:
+        # Use internal classification logic
+        result = await classify_image_internal(file, model_name, use_ensemble, request_id)
+        return JSONResponse(content=result)
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+        
+    except Exception as e:
+        logger.log_error("classify_endpoint", e, {"request_id": request_id})
         raise HTTPException(
             status_code=500,
             detail=f"Classification failed: {str(e)}"

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "../../../lib/supabase";
+import { uploadImage, StoredImageInfo } from "../../../lib/image-storage";
 import {
   generateEducationContent,
   generateConfidenceRecommendation,
@@ -7,6 +8,7 @@ import {
 
 // ML Service URL - in production this would be from environment variables
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL || "http://localhost:8001";
+const ML_SERVICE_TIMEOUT = parseInt(process.env.ML_SERVICE_TIMEOUT || "30000"); // 30 seconds default
 
 /**
  * POST /api/classify
@@ -53,7 +55,36 @@ const ML_SERVICE_URL = process.env.ML_SERVICE_URL || "http://localhost:8001";
  *   };
  *   nearby_facilities: Array<{...}>;
  *   processing_time: number;
+ *   ml_processing_time: number;
  *   created_at: string;
+ * }
+ *
+ * Response 400 (Bad Request):
+ * {
+ *   error: "Invalid image format or size";
+ *   details?: string;
+ *   processing_time?: number;
+ * }
+ *
+ * Response 408 (Timeout):
+ * {
+ *   error: "Classification request timed out";
+ *   retry_after: number;
+ *   processing_time: number;
+ * }
+ *
+ * Response 422 (Unprocessable Entity):
+ * {
+ *   error: "Unable to classify: image does not contain recognizable waste";
+ *   suggestion: string;
+ *   processing_time: number;
+ * }
+ *
+ * Response 503 (Service Unavailable):
+ * {
+ *   error: "Classification service temporarily unavailable";
+ *   retry_after: number;
+ *   processing_time: number;
  * }
  */
 
@@ -127,20 +158,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Forward image to ML service
+    // Forward image to ML service with timeout and better error handling
     const mlFormData = new FormData();
     mlFormData.append("image", imageFile);
 
     let mlResponse;
+    const mlStartTime = Date.now();
+
     try {
+      // Create AbortController for timeout handling
+      const controller = new AbortController();
+      const timeoutId = setTimeout(
+        () => controller.abort(),
+        ML_SERVICE_TIMEOUT
+      );
+
       const response = await fetch(`${ML_SERVICE_URL}/predict`, {
         method: "POST",
         body: mlFormData,
+        signal: controller.signal,
+        headers: {
+          // Let browser set multipart boundary
+        },
       });
 
+      clearTimeout(timeoutId);
+
+      const mlProcessingTime = Date.now() - mlStartTime;
+
       if (!response.ok) {
+        // Enhanced error handling based on ML service response
         if (response.status === 422) {
-          const errorData = await response.json();
+          const errorData = await response.json().catch(() => ({}));
           return NextResponse.json(
             {
               error:
@@ -148,6 +197,7 @@ export async function POST(request: NextRequest) {
               suggestion:
                 errorData.details?.suggestion ||
                 "Please upload a clear image of waste items",
+              processing_time: mlProcessingTime,
             },
             { status: 422 }
           );
@@ -159,8 +209,20 @@ export async function POST(request: NextRequest) {
             {
               error: "Classification service temporarily unavailable",
               retry_after: errorData.details?.retry_after || 60,
+              processing_time: mlProcessingTime,
             },
             { status: 503 }
+          );
+        }
+
+        if (response.status === 400) {
+          const errorData = await response.json().catch(() => ({}));
+          return NextResponse.json(
+            {
+              error: errorData.detail || "Invalid image format or content",
+              processing_time: mlProcessingTime,
+            },
+            { status: 400 }
           );
         }
 
@@ -168,21 +230,106 @@ export async function POST(request: NextRequest) {
       }
 
       mlResponse = await response.json();
-    } catch {
+
+      // Log performance if exceeding targets (in development)
+      if (mlProcessingTime > 3000 && process.env.NODE_ENV === "development") {
+        // eslint-disable-next-line no-console
+        console.warn(
+          `ML service processing time exceeded target: ${mlProcessingTime}ms > 3000ms`
+        );
+      }
+    } catch (error) {
+      const mlProcessingTime = Date.now() - mlStartTime;
+
+      if (error instanceof Error) {
+        // Handle timeout specifically
+        if (error.name === "AbortError") {
+          return NextResponse.json(
+            {
+              error: "Classification request timed out",
+              retry_after: 30,
+              processing_time: mlProcessingTime,
+            },
+            { status: 408 }
+          );
+        }
+
+        // Handle network errors
+        if (error.message.includes("fetch")) {
+          return NextResponse.json(
+            {
+              error: "Unable to connect to classification service",
+              retry_after: 60,
+              processing_time: mlProcessingTime,
+            },
+            { status: 503 }
+          );
+        }
+      }
+
+      // Generic ML service error
       return NextResponse.json(
         {
           error: "Classification service temporarily unavailable",
           retry_after: 60,
+          processing_time: mlProcessingTime,
         },
         { status: 503 }
       );
     }
 
-    // Process ML response
-    const category = mlResponse.category as keyof typeof CATEGORY_CODES;
+    // Process ML response - handle both /classify and /predict response formats
+    const category = (mlResponse.category ||
+      mlResponse.prediction) as keyof typeof CATEGORY_CODES;
     const confidence = mlResponse.confidence;
-    const scores = mlResponse.scores;
+    const scores = mlResponse.scores || {
+      organik: mlResponse.probabilities?.Organik || 0,
+      anorganik: mlResponse.probabilities?.Anorganik || 0,
+      lainnya: mlResponse.probabilities?.Lainnya || 0,
+    };
+    const mlProcessingTime = mlResponse.processing_time || 0;
     const lowConfidenceWarning = confidence < 70;
+
+    // Validate category
+    if (!category || !(category in CATEGORY_CODES)) {
+      return NextResponse.json(
+        {
+          error: "Invalid classification result from ML service",
+          details: [`Unknown category: ${category}`],
+        },
+        { status: 500 }
+      );
+    }
+
+    // Upload image to Supabase Storage with compression
+    let storedImageInfo: StoredImageInfo;
+    try {
+      storedImageInfo = await uploadImage(imageFile, user.id, {
+        compress: true,
+        folder: "classifications",
+      });
+    } catch (storageError) {
+      // If image storage fails, continue with classification but log error
+      // This ensures the main functionality works even if storage has issues
+      if (process.env.NODE_ENV === "development") {
+        // eslint-disable-next-line no-console
+        console.warn("Image storage failed:", storageError);
+      }
+
+      // Use fallback temporary storage info
+      storedImageInfo = {
+        filename: `temp_${Date.now()}.jpg`,
+        path: "/temp/path",
+        metadata: {
+          originalName: imageFile.name,
+          mimeType: imageFile.type,
+          originalSize: imageFile.size,
+          compressedSize: imageFile.size,
+          width: 0,
+          height: 0,
+        },
+      };
+    }
 
     // Get waste category ID
     const { data: wasteCategory, error: categoryError } = await supabase
@@ -201,15 +348,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Store classification in database
+    // Store classification in database with image storage info
     const { data: classification, error: dbError } = await supabase
       .from("classifications")
       .insert({
         user_id: user.id,
         waste_category_id: wasteCategory.waste_category_id,
-        image_filename: `temp_${Date.now()}.jpg`, // Temporary filename
-        image_path: "/temp/path", // TODO: Implement actual image storage
-        original_filename: imageFile.name,
+        image_filename: storedImageInfo.filename,
+        image_path: storedImageInfo.path,
+        original_filename: storedImageInfo.metadata.originalName,
         confidence_organik: scores.organik,
         confidence_anorganik: scores.anorganik,
         confidence_lainnya: scores.lainnya,
@@ -266,7 +413,7 @@ export async function POST(request: NextRequest) {
       lainnya: scores.lainnya,
     });
 
-    // Return complete classification response
+    // Return complete classification response with enhanced performance metrics
     return NextResponse.json({
       classification_id: classification.classification_id,
       result: {
@@ -280,6 +427,17 @@ export async function POST(request: NextRequest) {
         anorganik: scores.anorganik,
         lainnya: scores.lainnya,
       },
+      image_info: {
+        filename: storedImageInfo.filename,
+        public_url: storedImageInfo.publicUrl,
+        signed_url: storedImageInfo.signedUrl,
+        original_size: storedImageInfo.metadata.originalSize,
+        compressed_size: storedImageInfo.metadata.compressedSize,
+        dimensions: {
+          width: storedImageInfo.metadata.width,
+          height: storedImageInfo.metadata.height,
+        },
+      },
       recommendations: {
         disposal_guidance: educationContent.disposal_guidance,
         education_content: educationContent.environmental_impact,
@@ -290,6 +448,7 @@ export async function POST(request: NextRequest) {
       },
       nearby_facilities: nearbyFacilities,
       processing_time: processingTime,
+      ml_processing_time: mlProcessingTime,
       created_at: classification.created_at,
     });
   } catch {

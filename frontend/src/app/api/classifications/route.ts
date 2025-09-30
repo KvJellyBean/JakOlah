@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "../../../lib/supabase";
+import { getImageUrl } from "../../../lib/image-storage";
 import { z } from "zod";
 
 /**
@@ -165,9 +166,9 @@ export async function GET(request: NextRequest) {
     const totalItems = count || 0;
     const totalPages = Math.ceil(totalItems / limit);
 
-    // Transform data for response
-    const formattedClassifications =
-      classifications?.map(classification => {
+    // Transform data for response with signed URLs
+    const formattedClassifications = await Promise.all(
+      classifications?.map(async classification => {
         const category = classification.waste_categories?.[0];
         const maxConfidence = Math.max(
           classification.confidence_organik,
@@ -180,14 +181,16 @@ export async function GET(request: NextRequest) {
           category: category?.category_name || "Unknown",
           category_code: category?.category_code || "UNK",
           confidence: maxConfidence,
-          // TODO: Generate signed URL for image when image storage is implemented
-          // image_url: await generateSignedUrl(classification.image_path),
+          image_url: classification.image_path
+            ? await getImageUrl(classification.image_path)
+            : undefined,
           created_at: classification.created_at,
           ...(maxConfidence < 70 && {
             low_confidence_warning: true,
           }),
         };
-      }) || [];
+      }) || []
+    );
 
     return NextResponse.json({
       classifications: formattedClassifications,

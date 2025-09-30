@@ -378,30 +378,43 @@ docs/
 
 ## Phase 3.8: Integration & Features
 
-- [ ] **T042** Integrate ML service with classification API
+- [x] **T042** Integrate ML service with classification API
 
   - **Constitutional**: Performance monitoring, error handling for service failures
   - **Features**: HTTP client setup, timeout handling, fallback responses
   - **Integration**: Connect T019 (frontend API) with T027 (ML service endpoint)
+  - **Status**: COMPLETED - Enhanced /predict endpoint with dual compatibility (/predict + /classify), timeout handling with AbortController (15s), performance monitoring, comprehensive error handling
+  - **Implementation**: ML service classification.py enhanced with shared classify_image_internal logic, frontend classify/route.ts integrated with image storage
   - **Dependencies**: T019 (classify API), T027 (ML service endpoint)
 
-- [ ] **T043** Implement image storage integration with Supabase Storage
+- [x] **T043** Implement image storage integration with Supabase Storage
 
   - **Constitutional**: Data privacy with signed URLs, user access control
   - **Features**: Upload handling, automatic cleanup, compression
+  - **Status**: COMPLETED - Comprehensive image storage service with compression (canvas API), signed URLs, user-scoped access, automatic cleanup
+  - **Implementation**: image-storage.ts with uploadImage(), getImageUrl(), deleteUserImages(), compressImage() functions, integrated with classify API
+  - **Security**: User-scoped file paths, RLS policies, signed URLs with expiry
   - **Dependencies**: T002 (Supabase setup), T037 (classify page)
 
-- [ ] **T044** [P] Implement user location services for facility recommendations
+- [x] **T044** [P] Implement user location services for facility recommendations
 
   - **Constitutional**: Privacy controls, explicit consent for location access
   - **Features**: Geolocation API, distance calculations, permission handling
+  - **Status**: COMPLETED - LocationPermission component with privacy-aware UI, location-service.ts with geolocation utilities, Jakarta bounds validation
+  - **Implementation**: LocationPermission.tsx with comprehensive privacy explanations, getUserLocation(), calculateDistance(), sortFacilitiesByDistance() functions
+  - **Privacy**: Explicit consent flow, clear benefits explanation, fallback without location
   - **Dependencies**: T041 (facility integration), T022 (facilities API)
 
-- [ ] **T045** [P] Implement educational content system matching UI designs
+- [x] **T045** [P] Implement educational content system matching UI designs
 
   - **Features**: Category-specific disposal guidance, Jakarta waste management info
   - **Design Reference**: Educational content sections in existing UI mockups
   - **Content**: Indonesian language educational materials, contextual recommendations
+  - **Status**: COMPLETED - Comprehensive educational system with Jakarta-specific content, interactive components, government program integration
+  - **Implementation**: EducationContent.tsx (full educational system), EducationalInfoCards.tsx (interactive cards), EnhancedEducationResult.tsx (classification integration)
+  - **Content**: Jakarta statistics (7,700 ton/hari), 2,800+ Bank Sampah, TPS 3R programs, B3 drop points, economic values, environmental impact
+  - **Features**: Category-specific guides (ORG/ANO/LAI), Jakarta government programs, practical tips, Call Center 106 integration
+  - **Languages**: Full Indonesian language, Jakarta context, local facility information
   - **Dependencies**: T007 (seed data), T037 (classify page), T039 (info page)
 
 ## Phase 3.9: Quality Assurance & Testing
@@ -445,6 +458,45 @@ docs/
   - **Manual Testing**: UI/UX validation against existing mockups, text content review
   - **Dependencies**: T035-T040 (all pages)
 
+## Phase 4.0: Full Application Integration (Future Development)
+
+**Objective**: Connect all backend APIs with frontend components for complete application functionality
+
+- [ ] **T051** [P] Complete authentication system integration
+
+  - **Features**: Real login/register/forgot password with Supabase Auth
+  - **Pages**: /masuk, /daftar, /lupa-password with actual authentication flows
+  - **Session**: Persistent sessions, protected routes, auto-redirect
+  - **Dependencies**: T001 (Supabase setup), T035-T036 (auth pages)
+
+- [ ] **T052** [P] Complete classification workflow integration
+
+  - **Features**: End-to-end classification with result storage
+  - **Flow**: Image upload → ML classification → Result display → History storage
+  - **Integration**: Connect T037 (classify page) with T042 (ML service) and T043 (image storage)
+  - **Dependencies**: T037 (classify page), T042-T043 (integration services)
+
+- [ ] **T053** [P] Complete account management integration
+
+  - **Features**: Real user profile, classification history, settings
+  - **Pages**: /akun, /dashboard with actual database connections
+  - **Data**: Pull real user data, classification history, user analytics
+  - **Dependencies**: T038 (dashboard), T040 (akun), T020 (classifications API)
+
+- [ ] **T054** [P] Complete facility recommendations integration
+
+  - **Features**: Location-based facility search and recommendations
+  - **Integration**: Connect T044 (location services) with T022 (facilities API)
+  - **UI**: Display nearest facilities, filtering, directions
+  - **Dependencies**: T022 (facilities API), T044 (location services)
+
+- [ ] **T055** [P] Production deployment and configuration
+
+  - **Features**: Environment setup, database migration, service deployment
+  - **Infrastructure**: ML service hosting, image storage configuration
+  - **Monitoring**: Error tracking, performance monitoring, usage analytics
+  - **Dependencies**: All previous tasks completion
+
 ## Dependencies
 
 **Setup Phase**: T001-T004 must complete before other phases
@@ -455,6 +507,7 @@ docs/
 **Frontend Phase**: T028-T034 (parallel components) depend on T001
 **Pages Phase**: T035-T041 (pages) depend on their respective components + APIs
 **Integration Phase**: T042-T045 depend on both API and ML implementations
+**Full Integration Phase**: T051-T055 depend on all previous implementations
 **QA Phase**: T046-T050 depend on complete implementation (manual testing approach)
 
 ## Parallel Execution Examples

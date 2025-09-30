@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "../../../../lib/supabase";
+import { deleteUserImages as deleteStorageImages } from "../../../../lib/image-storage";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
@@ -117,9 +118,9 @@ export async function DELETE(request: NextRequest) {
       backupData = await createUserDataBackup(user.id, supabase);
     }
 
-    // 1. Delete user images from storage
-    const imagesDeletionResult = await deleteUserImages(user.id, supabase);
-    deletionAudit.images_deleted = imagesDeletionResult.deleted_count;
+    // 1. Delete user images from storage using new image storage service
+    const imagesDeletionResult = await deleteStorageImages(user.id);
+    deletionAudit.images_deleted = imagesDeletionResult.deleted;
 
     // 2. Get count of classifications before deletion
     const { count: classificationsCount } = await supabase
@@ -217,57 +218,6 @@ async function createUserDataBackup(userId: string, supabase: SupabaseClient) {
     return backupData;
   } catch {
     return null;
-  }
-}
-
-async function deleteUserImages(
-  userId: string,
-  supabase: SupabaseClient
-): Promise<{ deleted_count: number; errors: string[] }> {
-  try {
-    // Get all images associated with user classifications
-    const { data: classifications } = await supabase
-      .from("classifications")
-      .select("image_url")
-      .eq("user_id", userId)
-      .not("image_url", "is", null);
-
-    if (!classifications || classifications.length === 0) {
-      return { deleted_count: 0, errors: [] };
-    }
-
-    const imageUrls = classifications
-      .map((c: { image_url: string }) => c.image_url)
-      .filter(Boolean);
-    const errors: string[] = [];
-    let deletedCount = 0;
-
-    // Delete images from Supabase Storage
-    for (const imageUrl of imageUrls) {
-      try {
-        // Extract file path from URL
-        const filePath = imageUrl.replace(
-          /.*\/storage\/v1\/object\/public\/[^/]+\//,
-          ""
-        );
-
-        const { error } = await supabase.storage
-          .from("classification-images")
-          .remove([filePath]);
-
-        if (error) {
-          errors.push(`Failed to delete image: ${filePath}`);
-        } else {
-          deletedCount++;
-        }
-      } catch {
-        errors.push(`Error processing image: ${imageUrl}`);
-      }
-    }
-
-    return { deleted_count: deletedCount, errors };
-  } catch {
-    return { deleted_count: 0, errors: ["Failed to process image deletion"] };
   }
 }
 

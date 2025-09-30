@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "../../../lib/supabase";
+import {
+  calculateDistance,
+  isWithinJakartaBounds,
+  formatDistance,
+  type Coordinates,
+} from "../../../lib/location-service";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
@@ -26,6 +32,8 @@ interface FacilityData {
   created_at: string;
   updated_at: string;
   distance?: number;
+  formatted_distance?: string;
+  travel_time_estimate?: number;
 }
 
 interface GeospatialParams {
@@ -256,7 +264,15 @@ async function filterByDistance(
   radiusKm: number,
   supabase: SupabaseClient
 ): Promise<FacilityData[]> {
-  // Use PostGIS for accurate distance calculation
+  // Validate user location is within Jakarta bounds
+  const userLocation: Coordinates = { latitude: userLat, longitude: userLng };
+
+  if (!isWithinJakartaBounds(userLocation)) {
+    // If user is outside Jakarta, return all facilities without distance filtering
+    return facilities;
+  }
+
+  // Use PostGIS for accurate distance calculation if available
   const { data: facilitiesWithDistance, error } = await supabase.rpc(
     "get_facilities_within_radius",
     {
@@ -267,44 +283,24 @@ async function filterByDistance(
   );
 
   if (error || !facilitiesWithDistance) {
-    // Fallback to Haversine formula if PostGIS function not available
+    // Fallback to our improved distance calculation
     return facilities
-      .map(facility => ({
-        ...facility,
-        distance: calculateHaversineDistance(
-          userLat,
-          userLng,
-          facility.latitude,
-          facility.longitude
-        ),
-      }))
-      .filter(facility => (facility.distance || 0) <= radiusKm);
+      .map(facility => {
+        const distance = calculateDistance(userLocation, {
+          latitude: facility.latitude,
+          longitude: facility.longitude,
+        });
+
+        return {
+          ...facility,
+          distance: distance.distance_km,
+          formatted_distance: formatDistance(distance.distance_km),
+          travel_time_estimate: distance.travel_time_estimate || 0,
+        };
+      })
+      .filter(facility => (facility.distance || 0) <= radiusKm)
+      .sort((a, b) => (a.distance || 0) - (b.distance || 0)); // Sort by distance
   }
 
   return facilitiesWithDistance;
-}
-
-function calculateHaversineDistance(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number
-): number {
-  const R = 6371; // Earth's radius in kilometers
-  const dLat = toRadians(lat2 - lat1);
-  const dLon = toRadians(lon2 - lon1);
-
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRadians(lat1)) *
-      Math.cos(toRadians(lat2)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-
-function toRadians(degrees: number): number {
-  return degrees * (Math.PI / 180);
 }
