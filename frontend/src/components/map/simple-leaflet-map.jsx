@@ -16,6 +16,7 @@ const SimpleLeafletMap = ({
 }) => {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
+  const routingControlRef = useRef(null);
 
   useEffect(() => {
     // Only run on client-side
@@ -120,11 +121,24 @@ const SimpleLeafletMap = ({
             iconAnchor: [16, 40],
           });
 
-          const marker = L.marker([facility.latitude, facility.longitude], {
+          // Get coordinates from position object or flat properties
+          const lat = facility.position?.lat ?? facility.latitude;
+          const lng = facility.position?.lng ?? facility.longitude;
+
+          // Skip if coordinates are invalid
+          if (lat === undefined || lng === undefined) {
+            console.warn(
+              `Skipping facility ${facility.name} - invalid coordinates`,
+              facility
+            );
+            return;
+          }
+
+          const marker = L.marker([lat, lng], {
             icon: facilityIcon,
           }).addTo(map);
 
-          // Popup content
+          // Popup content (no emojis/complex SVG to avoid syntax errors)
           const popupContent = `
             <div style="padding: 8px; min-width: 200px;">
               <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
@@ -137,40 +151,124 @@ const SimpleLeafletMap = ({
                 ${facility.distance ? `<span style="font-size: 12px; color: #666; background: #f3f4f6; padding: 2px 8px; border-radius: 4px;">${facility.distance}</span>` : ""}
               </div>
               <div style="font-size: 12px; color: #666; margin: 8px 0;">
-                <p style="margin: 4px 0;">📍 ${facility.address}</p>
-                <p style="margin: 4px 0;">🕐 Buka: ${facility.hours}</p>
+                <p style="margin: 4px 0;">Koordinat: ${facility.address}</p>
+                <p style="margin: 4px 0;">Jam Buka: ${facility.hours}</p>
               </div>
-              <div style="display: flex; gap: 8px; margin-top: 8px;">
-                <button 
-                  onclick="window.routeToFacility(${facility.id})"
-                  style="flex: 1; padding: 6px 12px; background: #22c55e; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500;">
-                  🧭 Rute
-                </button>
-                <button
-                  onclick="window.showFacilityInfo(${facility.id})"
-                  style="flex: 1; padding: 6px 12px; background: #f3f4f6; color: #374151; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500;">
-                  ℹ️ Info
-                </button>
-              </div>
+              <button 
+                id="route-btn-${facility.id}"
+                style="width: 100%; padding: 8px 12px; background: #22c55e; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; margin-top: 8px; transition: background 0.2s;"
+                onmouseover="this.style.background='#16a34a'"
+                onmouseout="this.style.background='#22c55e'">
+                Lihat Rute ke Lokasi
+              </button>
             </div>
           `;
 
           marker.bindPopup(popupContent, { maxWidth: 280 });
+
+          // Add click handler after popup opens
+          marker.on("popupopen", () => {
+            const btn = document.getElementById(`route-btn-${facility.id}`);
+            if (btn) {
+              btn.addEventListener("click", () => {
+                if (window.routeToFacility) {
+                  window.routeToFacility(facility.id);
+                }
+              });
+            }
+          });
         });
 
         // Setup global functions for popup buttons
         if (typeof window !== "undefined") {
-          window.routeToFacility = id => {
+          window.routeToFacility = async id => {
             const facility = facilities.find(f => f.id === id);
-            if (facility && onRouteClick) {
-              onRouteClick(facility);
-            }
-          };
+            if (!facility || !userLocation) return;
 
-          window.showFacilityInfo = id => {
-            const facility = facilities.find(f => f.id === id);
-            if (facility && onInfoClick) {
-              onInfoClick(facility);
+            try {
+              // Import Leaflet Routing Machine
+              const L = (await import("leaflet")).default;
+
+              // Remove existing routing control if any
+              if (routingControlRef.current) {
+                map.removeControl(routingControlRef.current);
+                routingControlRef.current = null;
+              }
+
+              const facilityLat = facility.position?.lat ?? facility.latitude;
+              const facilityLng = facility.position?.lng ?? facility.longitude;
+
+              // Try to load Leaflet Routing Machine with walking profile
+              try {
+                // Use direct OSRM API call for walking route
+                const response = await fetch(
+                  `https://router.project-osrm.org/route/v1/foot/${userLocation.longitude},${userLocation.latitude};${facilityLng},${facilityLat}?overview=full&geometries=geojson`
+                );
+
+                if (response.ok) {
+                  const data = await response.json();
+                  if (data.routes && data.routes[0]) {
+                    const route = data.routes[0];
+                    const coordinates = route.geometry.coordinates.map(
+                      coord => [coord[1], coord[0]]
+                    );
+
+                    // Red glowing route line
+                    const polyline = L.polyline(coordinates, {
+                      color: "#ef4444",
+                      weight: 6,
+                      opacity: 0.9,
+                      className: "route-line-glow",
+                    }).addTo(map);
+
+                    // Fit bounds to show route
+                    map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
+
+                    // Store for cleanup
+                    routingControlRef.current = polyline;
+
+                    if (onRouteClick) {
+                      onRouteClick(facility);
+                    }
+                  } else {
+                    throw new Error("No route found");
+                  }
+                } else {
+                  throw new Error("Routing API failed");
+                }
+              } catch (routingError) {
+                // Fallback: Draw simple line if routing machine not available
+                console.warn(
+                  "Routing machine not available, drawing simple line:",
+                  routingError
+                );
+
+                const polyline = L.polyline(
+                  [
+                    [userLocation.latitude, userLocation.longitude],
+                    [facilityLat, facilityLng],
+                  ],
+                  {
+                    color: "#ef4444",
+                    weight: 6,
+                    opacity: 0.9,
+                    className: "route-line-glow",
+                  }
+                ).addTo(map);
+
+                // Fit bounds to show both points
+                map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
+
+                // Store polyline for cleanup
+                routingControlRef.current = polyline;
+
+                if (onRouteClick) {
+                  onRouteClick(facility);
+                }
+              }
+            } catch (error) {
+              console.error("Failed to create route:", error);
+              // Silent fail - no alert popup
             }
           };
         }
@@ -183,6 +281,20 @@ const SimpleLeafletMap = ({
 
     // Cleanup
     return () => {
+      // Remove routing control if exists
+      if (routingControlRef.current && mapInstanceRef.current) {
+        try {
+          if (typeof routingControlRef.current.remove === "function") {
+            routingControlRef.current.remove();
+          } else if (mapInstanceRef.current.removeControl) {
+            mapInstanceRef.current.removeControl(routingControlRef.current);
+          }
+        } catch (e) {
+          console.warn("Error removing routing control:", e);
+        }
+        routingControlRef.current = null;
+      }
+
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
