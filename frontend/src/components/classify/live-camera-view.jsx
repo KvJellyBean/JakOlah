@@ -10,6 +10,7 @@ import {
   List,
 } from "lucide-react";
 import { BoundingBoxOverlay } from "./bounding-box-overlay";
+import { classifyFrame, optimizeImage } from "@/lib/api";
 
 /**
  * LiveCameraView Component
@@ -40,6 +41,10 @@ const LiveCameraView = ({
   // Real-time classification states
   const [detections, setDetections] = useState([]);
   const [videoSize, setVideoSize] = useState({ width: 0, height: 0 });
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingError, setProcessingError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const MAX_RETRIES = 3;
 
   const stopStream = useCallback(() => {
     if (streamRef.current) {
@@ -103,8 +108,11 @@ const LiveCameraView = ({
   }, []);
 
   /**
-   * Process frame with ML API
-   * TODO: Integrate with actual ML model in Phase 3.6
+   * Process frame with ML API (T046 + T048 + T050 + T051)
+   * - T046: Connect to ML service
+   * - T048: Image optimization before upload
+   * - T050: Error handling with user feedback
+   * - T051: Retry logic for failed requests
    */
   const processFrame = useCallback(async () => {
     if (processingRef.current || !isStreaming) {
@@ -113,45 +121,95 @@ const LiveCameraView = ({
 
     try {
       processingRef.current = true;
+      setIsProcessing(true);
+      setProcessingError(null);
 
-      const frameData = captureFrame();
-      if (!frameData) {
-        return;
+      // Capture frame from video
+      if (!videoRef.current || !canvasRef.current) {
+        throw new Error("Camera not ready");
       }
 
-      const response = await fetch("/api/classify-frame", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          image: frameData,
-          includeDetection: true,
-        }),
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      const context = canvas.getContext("2d");
+
+      // Set canvas dimensions
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+
+      // Draw video frame
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      // T048: Optimize image before upload (max 1280x720, quality 0.8)
+      const optimizedBlob = await optimizeImage(canvas, {
+        quality: 0.8,
+        maxWidth: 1280,
+        maxHeight: 720,
       });
 
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
-      }
+      // T046: Call ML service with optimized image
+      const result = await classifyFrame(optimizedBlob);
 
-      const result = await response.json();
+      // Success - reset retry count
+      setRetryCount(0);
 
-      // Extract bounding boxes if available
-      if (result.detections && result.detections.length > 0) {
-        setDetections(result.detections);
+      // Process detections
+      if (result.success && result.data && result.data.detections) {
+        const { detections, metadata } = result.data;
+
+        // Transform detections to component format
+        const transformedDetections = detections.map(detection => ({
+          id: detection.id,
+          category: detection.category,
+          confidence: detection.confidence,
+          bbox: detection.bbox, // {x, y, width, height}
+        }));
+
+        setDetections(transformedDetections);
+
+        // Callback with full result including metadata
+        onClassificationResult?.({
+          detections: transformedDetections,
+          metadata: {
+            ...metadata,
+            timestamp: new Date().toISOString(),
+          },
+        });
       } else {
         setDetections([]);
       }
-
-      // Callback for parent component
-      onClassificationResult?.(result);
     } catch (error) {
       console.error("Frame processing error:", error);
-      //   setError("Gagal memproses gambar. Coba lagi.");
+
+      // T050: Error handling with user feedback
+      setProcessingError(error.message);
+
+      // T051: Retry logic (max 3 attempts)
+      if (retryCount < MAX_RETRIES) {
+        setRetryCount(prev => prev + 1);
+        console.log(`Retrying... (${retryCount + 1}/${MAX_RETRIES})`);
+
+        // Retry after delay (exponential backoff)
+        setTimeout(
+          () => {
+            processingRef.current = false;
+            processFrame();
+          },
+          Math.min(1000 * Math.pow(2, retryCount), 5000)
+        );
+      } else {
+        // Max retries reached - show persistent error
+        console.error(
+          "Max retries reached. Please check ML service connection."
+        );
+      }
     } finally {
+      if (retryCount >= MAX_RETRIES || !processingError) {
+        setIsProcessing(false);
+      }
       processingRef.current = false;
     }
-  }, [captureFrame, isStreaming, onClassificationResult]);
+  }, [isStreaming, onClassificationResult, retryCount, processingError]);
 
   /**
    * Start/stop real-time classification
@@ -291,6 +349,36 @@ const LiveCameraView = ({
       {/* Bounding Box Overlay */}
       {detections.length > 0 && (
         <BoundingBoxOverlay detections={detections} videoSize={videoSize} />
+      )}
+
+      {/* T049: Processing Loading Indicator */}
+      {isProcessing && (
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-30">
+          <div className="bg-black/60 backdrop-blur-sm rounded-lg px-6 py-4 flex items-center space-x-3">
+            <div className="animate-spin rounded-full h-6 w-6 border-2 border-white border-t-transparent"></div>
+            <span className="text-white text-sm font-medium">Memproses...</span>
+          </div>
+        </div>
+      )}
+
+      {/* T050: Processing Error Display */}
+      {processingError && retryCount >= MAX_RETRIES && (
+        <div className="absolute top-20 right-4 max-w-sm z-20">
+          <div className="px-4 py-3 rounded-lg bg-orange-600/90 text-white shadow">
+            <p className="text-xs font-medium mb-1">Gagal memproses gambar</p>
+            <p className="text-xs opacity-90">{processingError}</p>
+            <button
+              onClick={() => {
+                setRetryCount(0);
+                setProcessingError(null);
+                processFrame();
+              }}
+              className="mt-2 text-xs underline hover:no-underline"
+            >
+              Coba lagi
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Status and errors */}

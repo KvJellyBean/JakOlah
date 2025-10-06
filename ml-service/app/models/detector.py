@@ -79,20 +79,30 @@ class WasteDetector:
             # Run inference
             self.interpreter.invoke()
             
-            # Get output tensors
-            # Common TFLite detection model outputs:
-            # 0: detection_boxes
-            # 1: detection_classes
-            # 2: detection_scores
-            # 3: num_detections
+            # Debug: Log output details
+            logger.info(f"Number of outputs: {len(self.output_details)}")
+            for i, output in enumerate(self.output_details):
+                logger.info(f"Output {i}: shape={output['shape']}, dtype={output['dtype']}")
             
-            if len(self.output_details) >= 4:
+            # Get output tensors
+            # TFLite detection model outputs vary by model type
+            # This model has 2 outputs: boxes and scores (no classes)
+            
+            if len(self.output_details) == 2:
+                # Simple detection model: boxes + scores only
+                boxes = self.interpreter.get_tensor(self.output_details[0]['index'])[0]
+                scores = self.interpreter.get_tensor(self.output_details[1]['index'])[0]
+                num_detections = len(scores)
+                
+                # Assign all detections as class 0 (waste)
+                classes = [0] * num_detections
+            elif len(self.output_details) >= 4:
                 boxes = self.interpreter.get_tensor(self.output_details[0]['index'])[0]
                 classes = self.interpreter.get_tensor(self.output_details[1]['index'])[0]
                 scores = self.interpreter.get_tensor(self.output_details[2]['index'])[0]
                 num_detections = int(self.interpreter.get_tensor(self.output_details[3]['index'])[0])
             else:
-                # Alternative output format
+                # Alternative 3-output format
                 boxes = self.interpreter.get_tensor(self.output_details[0]['index'])[0]
                 scores = self.interpreter.get_tensor(self.output_details[1]['index'])[0]
                 classes = self.interpreter.get_tensor(self.output_details[2]['index'])[0]

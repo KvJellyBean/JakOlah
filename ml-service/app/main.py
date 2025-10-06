@@ -36,7 +36,7 @@ app.add_middleware(
 )
 
 # Model paths
-BASE_DIR = Path(__file__).parent.parent.parent
+BASE_DIR = Path(__file__).parent.parent  # ml-service directory
 MODELS_DIR = BASE_DIR / "models"
 DETECTOR_PATH = MODELS_DIR / "model.tflite"
 CLASSIFIER_PATH = MODELS_DIR / "MobileNetV3_poly_model.pkl"

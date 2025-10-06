@@ -144,7 +144,7 @@ def normalize_image(image: np.ndarray, method: str = 'standard') -> np.ndarray:
 
 def preprocess_for_detection(
     image: np.ndarray,
-    input_size: Tuple[int, int] = (320, 320)
+    input_size: Tuple[int, int] = (256, 256)  # Match TFLite model input
 ) -> Tuple[np.ndarray, Tuple[int, int], Tuple[float, float]]:
     """
     Preprocess image for object detection model
