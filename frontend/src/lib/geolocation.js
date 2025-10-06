@@ -102,11 +102,23 @@ export function sortFacilitiesByDistance(facilities, userLocation) {
 
   return facilities
     .map(facility => {
+      // Handle both flat and nested position structures
+      const facilityLat = facility.position?.lat ?? facility.latitude;
+      const facilityLng = facility.position?.lng ?? facility.longitude;
+
+      if (facilityLat === undefined || facilityLng === undefined) {
+        return {
+          ...facility,
+          distanceKm: Infinity,
+          distance: "N/A",
+        };
+      }
+
       const distance = calculateDistance(
         userLocation.latitude,
         userLocation.longitude,
-        facility.latitude,
-        facility.longitude
+        facilityLat,
+        facilityLng
       );
       return {
         ...facility,
