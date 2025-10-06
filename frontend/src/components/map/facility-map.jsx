@@ -11,13 +11,13 @@ import {
   sortFacilitiesByDistance,
   JAKARTA_CENTER,
 } from "@/lib/geolocation";
+import { getFacilities } from "@/lib/api";
 
 /**
  * FacilityMap Component
  * Real Leaflet map with facility markers, user location, and filtering
  */
 const FacilityMap = ({
-  locations = [],
   onLocationRoute,
   onLocationInfo,
   onFilterChange,
@@ -25,7 +25,11 @@ const FacilityMap = ({
   currentFilter = "Semua",
   className = "",
 }) => {
-  const [visibleLocations, setVisibleLocations] = useState(4);
+  const [locations, setLocations] = useState([]);
+  const [isLoadingFacilities, setIsLoadingFacilities] = useState(true);
+  const [facilitiesError, setFacilitiesError] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 2;
   const [userLocation, setUserLocation] = useState(null);
   const [isLoadingLocation, setIsLoadingLocation] = useState(true);
   const [locationError, setLocationError] = useState(null);
@@ -38,9 +42,50 @@ const FacilityMap = ({
   const filters = [
     { label: "Semua", value: "Semua" },
     { label: "Bank Sampah", value: "Bank Sampah" },
-    { label: "TPS", value: "TPS" },
-    { label: "Daur Ulang", value: "Daur Ulang" },
+    { label: "TPA", value: "TPA" },
+    { label: "TPS3R", value: "TPS3R" },
+    { label: "Komposting", value: "Komposting" },
+    { label: "Produk Kreatif", value: "Produk Kreatif" },
   ];
+
+  // Fetch facilities from API
+  useEffect(() => {
+    const fetchFacilities = async () => {
+      try {
+        setIsLoadingFacilities(true);
+        setFacilitiesError(null);
+
+        const data = await getFacilities();
+
+        // Transform Supabase data - show coordinates for simplicity
+        const transformedData = data.map(facility => {
+          const lat = parseFloat(facility.latitude);
+          const lng = parseFloat(facility.longitude);
+
+          return {
+            id: facility.facility_id,
+            name: facility.facility_name,
+            type: facility.facility_type,
+            position: {
+              lat: lat,
+              lng: lng,
+            },
+            address: `${lat.toFixed(5)}, ${lng.toFixed(5)}`, // Show coordinates
+            wasteTypes: facility.waste_categories || [],
+          };
+        });
+
+        setLocations(transformedData);
+      } catch (error) {
+        console.error("Error fetching facilities:", error);
+        setFacilitiesError(error.message);
+      } finally {
+        setIsLoadingFacilities(false);
+      }
+    };
+
+    fetchFacilities();
+  }, []);
 
   // Get user location on mount
   useEffect(() => {
@@ -65,13 +110,56 @@ const FacilityMap = ({
     fetchUserLocation();
   }, []);
 
-  // Sort and filter locations
+  // Helper to calculate distance for limiting (defined before useMemo)
+  const calculateDistanceForLimit = (facility, userLoc) => {
+    const lat = facility.position?.lat ?? facility.latitude;
+    const lng = facility.position?.lng ?? facility.longitude;
+    if (!lat || !lng) return Infinity;
+
+    const R = 6371; // Earth radius in km
+    const dLat = ((lat - userLoc.latitude) * Math.PI) / 180;
+    const dLng = ((lng - userLoc.longitude) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((userLoc.latitude * Math.PI) / 180) *
+        Math.cos((lat * Math.PI) / 180) *
+        Math.sin(dLng / 2) *
+        Math.sin(dLng / 2);
+    return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  };
+
+  // Sort and filter locations with max 5 closest per category
   const processedLocations = useMemo(() => {
     let filtered = locations;
 
-    // Apply filter
+    // Apply category filter first
     if (currentFilter && currentFilter !== "Semua") {
       filtered = locations.filter(loc => loc.type === currentFilter);
+    }
+
+    // Always limit to 5 closest per category (for all filters)
+    if (userLocation) {
+      const byCategory = {};
+
+      // Group by category
+      filtered.forEach(facility => {
+        const category = facility.type || "Unknown";
+        if (!byCategory[category]) byCategory[category] = [];
+        byCategory[category].push(facility);
+      });
+
+      // Take 5 closest from each category
+      filtered = [];
+      Object.keys(byCategory).forEach(category => {
+        const sorted = byCategory[category]
+          .map(f => ({
+            ...f,
+            tempDistance: calculateDistanceForLimit(f, userLocation),
+          }))
+          .sort((a, b) => a.tempDistance - b.tempDistance)
+          .slice(0, 5); // Max 5 closest per category
+        filtered.push(...sorted);
+      });
     }
 
     // Sort by distance if user location available
@@ -79,19 +167,46 @@ const FacilityMap = ({
       filtered = sortFacilitiesByDistance(filtered, userLocation);
     }
 
-    // Add number for display
+    // Map facility type to colors
+    const typeColorMap = {
+      TPA: "red",
+      TPS3R: "blue",
+      "Bank Sampah": "emerald",
+      Komposting: "orange",
+      "Produk Kreatif": "purple",
+    };
+
+    // Add number, color, hours, distance for display
     return filtered.map((loc, index) => ({
       ...loc,
       number: index + 1,
+      color: typeColorMap[loc.type] || "emerald",
+      hours: loc.hours || "08:00 - 17:00",
+      distance: loc.distance || null,
     }));
   }, [locations, currentFilter, userLocation]);
 
+  // Pagination calculations
+  const totalPages = Math.ceil(processedLocations.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedLocations = processedLocations.slice(startIndex, endIndex);
+
   const handleFilterClick = filter => {
     onFilterChange?.(filter);
+    setCurrentPage(1); // Reset to page 1 when filter changes
   };
 
-  const handleLoadMore = () => {
-    setVisibleLocations(prev => Math.min(prev + 4, processedLocations.length));
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(prev => prev + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(prev => prev - 1);
+    }
   };
 
   const handleRecenterMap = () => {
@@ -136,14 +251,40 @@ const FacilityMap = ({
             </CardHeader>
             <CardContent className="p-0">
               {/* Real Leaflet Map */}
-              <div className="h-64 md:h-96 relative">
-                {isLoadingLocation && (
-                  <div className="absolute inset-0 bg-gray-100 flex items-center justify-center z-[1000]">
+              <div className="h-[280px] sm:h-[320px] md:h-[400px] lg:h-[500px] w-full min-w-[280px] relative overflow-hidden">
+                {/* Loading Facilities */}
+                {isLoadingFacilities && (
+                  <div className="absolute inset-0 bg-gray-100 flex items-center justify-center z-[1001]">
+                    <div className="text-center">
+                      <Loader2 className="w-8 h-8 animate-spin text-emerald-600 mx-auto mb-2" />
+                      <p className="text-sm text-gray-600">
+                        Memuat fasilitas...
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Loading Location */}
+                {!isLoadingFacilities && isLoadingLocation && (
+                  <div className="absolute inset-0 bg-gray-100/80 flex items-center justify-center z-[1000]">
                     <div className="text-center">
                       <Loader2 className="w-8 h-8 animate-spin text-emerald-600 mx-auto mb-2" />
                       <p className="text-sm text-gray-600">
                         Mencari lokasi Anda...
                       </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Facilities Error */}
+                {facilitiesError && (
+                  <div className="absolute top-4 left-4 right-4 bg-red-50 border border-red-200 rounded-lg p-3 z-[1000]">
+                    <div className="flex items-start space-x-2">
+                      <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                      <div className="text-xs text-red-800">
+                        <p className="font-medium">Gagal memuat fasilitas</p>
+                        <p>{facilitiesError}</p>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -234,35 +375,53 @@ const FacilityMap = ({
                   <p className="text-sm">Tidak ada lokasi ditemukan</p>
                 </div>
               ) : (
-                processedLocations
-                  .slice(0, visibleLocations)
-                  .map(location => (
-                    <LocationCard
-                      key={location.id}
-                      name={location.name}
-                      type={location.type}
-                      distance={location.distance}
-                      address={location.address}
-                      hours={location.hours}
-                      color={location.color}
-                      number={location.number}
-                      onRouteClick={() => onLocationRoute?.(location)}
-                      onInfoClick={() => onLocationInfo?.(location)}
-                    />
-                  ))
+                paginatedLocations.map(location => (
+                  <LocationCard
+                    key={location.id}
+                    name={location.name}
+                    type={location.type}
+                    distance={location.distance}
+                    address={location.address}
+                    hours={location.hours}
+                    color={location.color}
+                    number={location.number}
+                    onRouteClick={() => {
+                      // Trigger routing on map
+                      if (
+                        typeof window !== "undefined" &&
+                        window.routeToFacility
+                      ) {
+                        window.routeToFacility(location.id);
+                      }
+                      // Also call parent handler if provided
+                      onLocationRoute?.(location);
+                    }}
+                  />
+                ))
               )}
             </div>
 
-            {/* Load More */}
-            {visibleLocations < processedLocations.length && (
-              <div className="mt-6">
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="mt-6 flex items-center justify-between">
                 <Button
                   variant="outline"
-                  className="w-full"
-                  onClick={handleLoadMore}
+                  size="sm"
+                  onClick={handlePrevPage}
+                  disabled={currentPage === 1}
                 >
-                  Lihat Lebih Banyak (
-                  {processedLocations.length - visibleLocations} lainnya)
+                  ← Sebelumnya
+                </Button>
+                <div className="text-sm text-gray-600">
+                  Halaman {currentPage} dari {totalPages}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleNextPage}
+                  disabled={currentPage === totalPages}
+                >
+                  Selanjutnya →
                 </Button>
               </div>
             )}

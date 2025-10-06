@@ -1,4 +1,4 @@
-import { MapPin, Clock, Navigation, Info } from "lucide-react";
+import { MapPin, Clock, Navigation } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const LocationCard = ({
@@ -10,7 +10,6 @@ const LocationCard = ({
   color,
   number,
   onRouteClick,
-  onInfoClick,
   className = "",
 }) => {
   const colorClasses = {
@@ -36,7 +35,8 @@ const LocationCard = ({
     },
   };
 
-  const currentColor = colorClasses[color];
+  // Fallback to emerald if color not found
+  const currentColor = colorClasses[color] || colorClasses.emerald;
 
   return (
     <div
@@ -76,25 +76,14 @@ const LocationCard = ({
         </p>
       </div>
 
-      <div className="flex space-x-2">
-        <Button
-          size="sm"
-          className="flex-1 text-xs md:text-sm"
-          onClick={onRouteClick}
-        >
-          <Navigation className="w-3 h-3 mr-1" />
-          Rute
-        </Button>
-        <Button
-          variant="secondary"
-          size="sm"
-          className="flex-1 text-xs md:text-sm"
-          onClick={onInfoClick}
-        >
-          <Info className="w-3 h-3 mr-1" />
-          Info
-        </Button>
-      </div>
+      <Button
+        size="sm"
+        className="w-full text-xs md:text-sm font-semibold"
+        onClick={onRouteClick}
+      >
+        <Navigation className="w-4 h-4 mr-2" />
+        Lihat Rute ke Lokasi
+      </Button>
     </div>
   );
 };

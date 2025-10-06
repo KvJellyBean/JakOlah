@@ -4,121 +4,45 @@ import { useState } from "react";
 import { Leaf, Menu, X } from "lucide-react";
 import { LiveCameraView } from "@/components/classify/live-camera-view";
 import { FacilityMap } from "@/components/map/facility-map";
+import { useClassificationSession } from "@/hooks/useClassificationSession";
 
 export default function KlasifikasiPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("camera");
   const [currentFilter, setCurrentFilter] = useState("Semua");
 
-  // Mock locations data with coordinates (Jakarta area)
-  // TODO: Replace with actual data from database/API in Phase 3.6
-  const locations = [
-    {
-      id: 1,
-      name: "Bank Sampah Melati",
-      type: "Bank Sampah",
-      address: "Jl. Kebon Jeruk No. 15, Kebon Jeruk",
-      hours: "08:00 - 16:00",
-      color: "emerald",
-      latitude: -6.2,
-      longitude: 106.78,
-    },
-    {
-      id: 2,
-      name: "TPS Cempaka Putih",
-      type: "TPS",
-      address: "Jl. Cempaka Putih Raya, Cempaka Putih",
-      hours: "24 Jam",
-      color: "blue",
-      latitude: -6.175,
-      longitude: 106.87,
-    },
-    {
-      id: 3,
-      name: "Bank Sampah Mawar",
-      type: "Bank Sampah",
-      address: "Jl. Mawar Indah No. 8, Tebet",
-      hours: "09:00 - 15:00",
-      color: "emerald",
-      latitude: -6.23,
-      longitude: 106.86,
-    },
-    {
-      id: 4,
-      name: "Pusat Daur Ulang Jakarta",
-      type: "Daur Ulang",
-      address: "Jl. Industri No. 22, Pulo Gadung",
-      hours: "07:00 - 17:00",
-      color: "orange",
-      latitude: -6.19,
-      longitude: 106.9,
-    },
-    {
-      id: 5,
-      name: "Bank Sampah Bersih",
-      type: "Bank Sampah",
-      address: "Jl. Gatot Subroto, Menteng",
-      hours: "08:00 - 17:00",
-      color: "emerald",
-      latitude: -6.21,
-      longitude: 106.83,
-    },
-    {
-      id: 6,
-      name: "TPS 3R Manggarai",
-      type: "TPS",
-      address: "Jl. Manggarai Utara, Manggarai",
-      hours: "24 Jam",
-      color: "blue",
-      latitude: -6.215,
-      longitude: 106.85,
-    },
-    {
-      id: 7,
-      name: "Pusat Daur Ulang Plastik",
-      type: "Daur Ulang",
-      address: "Jl. Raya Bekasi, Cakung",
-      hours: "06:00 - 18:00",
-      color: "orange",
-      latitude: -6.17,
-      longitude: 106.92,
-    },
-    {
-      id: 8,
-      name: "Bank Sampah Hijau",
-      type: "Bank Sampah",
-      address: "Jl. Proklamasi, Menteng",
-      hours: "09:00 - 16:00",
-      color: "emerald",
-      latitude: -6.195,
-      longitude: 106.845,
-    },
-  ];
+  // T052: Session management
+  const { addClassification, getSessionSummary } = useClassificationSession();
 
   const handleLocationRoute = location => {
     console.log("Navigate to:", location);
-    // TODO: Integrate with maps/navigation
+    // Route visualization handled by map component
   };
 
   const handleLocationInfo = location => {
     console.log("Show info for:", location);
-    // TODO: Show location details modal
+    // Info feature removed - simplified UX
   };
 
   const handleFilterChange = filter => {
     setCurrentFilter(filter);
-    // TODO: Filter locations based on type
   };
 
   const handleClassificationResult = result => {
-    console.log("Classification result:", result);
-    // TODO: Save to history, analytics, etc
+    // T052: Add to session tracking
+    addClassification(result);
+
+    // Optional: Log session summary for debugging
+    if (process.env.NODE_ENV === "development") {
+      const summary = getSessionSummary();
+      console.log("Classification added. Session summary:", summary);
+    }
   };
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
       {/* Navigation */}
-      <nav className="bg-white text-gray-900 border-b border-gray-200 sticky top-0 z-50">
+      <nav className="bg-white text-gray-900 border-b border-gray-200 sticky top-0 z-[9999]">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-3">
@@ -224,16 +148,16 @@ export default function KlasifikasiPage() {
       <main className="flex-1 flex flex-col">
         {activeTab === "camera" ? (
           <LiveCameraView
+            key="camera-view"
             onTabChange={setActiveTab}
             enableRealTimeClassification={true}
             classificationInterval={2000}
             onClassificationResult={handleClassificationResult}
           />
         ) : (
-          <div className="flex-1 bg-gray-50 text-gray-900">
+          <div key="map-view" className="flex-1 bg-gray-50 text-gray-900">
             <div className="max-w-7xl mx-auto px-4 py-6 md:py-8">
               <FacilityMap
-                locations={locations}
                 onLocationRoute={handleLocationRoute}
                 onLocationInfo={handleLocationInfo}
                 onFilterChange={handleFilterChange}
