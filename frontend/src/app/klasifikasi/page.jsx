@@ -1,137 +1,249 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { NavigationHeader } from "@/components/ui/navigation-header";
-import { ImageUpload } from "@/components/classify/image-upload";
-import { ClassificationResult } from "@/components/classify/classification-result";
-import { FacilityMap } from "@/components/classify/facility-map";
+import { Leaf, Menu, X } from "lucide-react";
+import { LiveCameraView } from "@/components/classify/live-camera-view";
+import { FacilityMap } from "@/components/map/facility-map";
 
 export default function KlasifikasiPage() {
-  const router = useRouter();
-  const [classification, setClassification] = useState(null);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("camera");
+  const [currentFilter, setCurrentFilter] = useState("Semua");
 
-  // Mock facilities data
-  // Mock data untuk facilities
-  const facilities = [
+  // Mock locations data with coordinates (Jakarta area)
+  // TODO: Replace with actual data from database/API in Phase 3.6
+  const locations = [
     {
-      id: "1",
-      name: "Bank Sampah Berkah",
+      id: 1,
+      name: "Bank Sampah Melati",
       type: "Bank Sampah",
-      distance: "0.8 km",
-      address: "Jl. Kebon Jeruk No. 15, Jakarta Barat",
+      address: "Jl. Kebon Jeruk No. 15, Kebon Jeruk",
       hours: "08:00 - 16:00",
       color: "emerald",
-      coordinates: { lat: -6.2088, lng: 106.8456 },
+      latitude: -6.2,
+      longitude: 106.78,
     },
     {
-      id: "2",
-      name: "TPS 3R Melati",
-      type: "TPS 3R",
-      distance: "1.2 km",
-      address: "Jl. Melati Raya No. 45, Jakarta Barat",
-      hours: "06:00 - 18:00",
+      id: 2,
+      name: "TPS Cempaka Putih",
+      type: "TPS",
+      address: "Jl. Cempaka Putih Raya, Cempaka Putih",
+      hours: "24 Jam",
       color: "blue",
-      coordinates: { lat: -6.2188, lng: 106.8356 },
+      latitude: -6.175,
+      longitude: 106.87,
     },
     {
-      id: "3",
-      name: "Komposting Hijau",
-      type: "Pengolahan Organik",
-      distance: "2.1 km",
-      address: "Jl. Daun Hijau No. 88, Jakarta Barat",
-      hours: "07:00 - 17:00",
+      id: 3,
+      name: "Bank Sampah Mawar",
+      type: "Bank Sampah",
+      address: "Jl. Mawar Indah No. 8, Tebet",
+      hours: "09:00 - 15:00",
       color: "emerald",
-      coordinates: { lat: -6.1988, lng: 106.8556 },
+      latitude: -6.23,
+      longitude: 106.86,
+    },
+    {
+      id: 4,
+      name: "Pusat Daur Ulang Jakarta",
+      type: "Daur Ulang",
+      address: "Jl. Industri No. 22, Pulo Gadung",
+      hours: "07:00 - 17:00",
+      color: "orange",
+      latitude: -6.19,
+      longitude: 106.9,
+    },
+    {
+      id: 5,
+      name: "Bank Sampah Bersih",
+      type: "Bank Sampah",
+      address: "Jl. Gatot Subroto, Menteng",
+      hours: "08:00 - 17:00",
+      color: "emerald",
+      latitude: -6.21,
+      longitude: 106.83,
+    },
+    {
+      id: 6,
+      name: "TPS 3R Manggarai",
+      type: "TPS",
+      address: "Jl. Manggarai Utara, Manggarai",
+      hours: "24 Jam",
+      color: "blue",
+      latitude: -6.215,
+      longitude: 106.85,
+    },
+    {
+      id: 7,
+      name: "Pusat Daur Ulang Plastik",
+      type: "Daur Ulang",
+      address: "Jl. Raya Bekasi, Cakung",
+      hours: "06:00 - 18:00",
+      color: "orange",
+      latitude: -6.17,
+      longitude: 106.92,
+    },
+    {
+      id: 8,
+      name: "Bank Sampah Hijau",
+      type: "Bank Sampah",
+      address: "Jl. Proklamasi, Menteng",
+      hours: "09:00 - 16:00",
+      color: "emerald",
+      latitude: -6.195,
+      longitude: 106.845,
     },
   ];
 
-  const handleImageUpload = async file => {
-    setIsProcessing(true);
-
-    // Simulasi API call dengan file yang di-upload
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    // Mock classification result berdasarkan nama file
-    const filename = file.name.toLowerCase();
-    let mockResult;
-
-    if (
-      filename.includes("organic") ||
-      filename.includes("banana") ||
-      filename.includes("apple")
-    ) {
-      mockResult = [
-        { name: "Organik", percentage: 85, color: "emerald" },
-        { name: "Anorganik", percentage: 10, color: "blue" },
-        { name: "Lainnya", percentage: 5, color: "red" },
-      ];
-    } else if (filename.includes("plastic") || filename.includes("bottle")) {
-      mockResult = [
-        { name: "Anorganik", percentage: 90, color: "blue" },
-        { name: "Organik", percentage: 8, color: "emerald" },
-        { name: "Lainnya", percentage: 2, color: "red" },
-      ];
-    } else {
-      mockResult = [
-        { name: "Anorganik", percentage: 70, color: "blue" },
-        { name: "Organik", percentage: 25, color: "emerald" },
-        { name: "Lainnya", percentage: 5, color: "red" },
-      ];
-    }
-
-    setClassification(mockResult);
-    setIsProcessing(false);
+  const handleLocationRoute = location => {
+    console.log("Navigate to:", location);
+    // TODO: Integrate with maps/navigation
   };
 
-  const handleReset = () => {
-    setClassification(null);
-    setIsProcessing(false);
+  const handleLocationInfo = location => {
+    console.log("Show info for:", location);
+    // TODO: Show location details modal
+  };
+
+  const handleFilterChange = filter => {
+    setCurrentFilter(filter);
+    // TODO: Filter locations based on type
+  };
+
+  const handleClassificationResult = result => {
+    console.log("Classification result:", result);
+    // TODO: Save to history, analytics, etc
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <NavigationHeader
-        items={[
-          { href: "/", label: "Beranda" },
-          { href: "/klasifikasi", label: "Klasifikasi", active: true },
-          { href: "/informasi", label: "Informasi" },
-        ]}
-        showLoginButton
-        onLoginClick={() => router.push("/masuk")}
-      />
+    <div className="min-h-screen bg-black text-white flex flex-col">
+      {/* Navigation */}
+      <nav className="bg-white text-gray-900 border-b border-gray-200 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
+                <Leaf className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-xl font-semibold">JakOlah</span>
+            </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6 md:py-8">
-        <div className="mb-10 md:mb-10 flex-col justtify-center">
-          <h1 className="text-3xl md:text-4xl max-md:text-center font-bold text-gray-900 mb-3">
-            Klasifikasi Sampah
-          </h1>
-          <p className="text-lg md:text-xl max-md:text-center text-gray-600">
-            Upload gambar sampah untuk mengidentifikasi jenisnya dan mendapatkan
-            rekomendasi pengelolaan
-          </p>
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex items-center space-x-8">
+              <a href="/" className="text-gray-600 hover:text-gray-900">
+                Beranda
+              </a>
+              <a href="/klasifikasi" className="text-emerald-600 font-medium">
+                Klasifikasi
+              </a>
+              <a
+                href="/informasi"
+                className="text-gray-600 hover:text-gray-900"
+              >
+                Informasi
+              </a>
+            </div>
+
+            {/* Mobile menu button */}
+            <div className="md:hidden">
+              <button
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className="text-gray-600 hover:text-gray-900 focus:outline-none focus:text-gray-900"
+                aria-label="Toggle menu"
+                aria-expanded={isMenuOpen}
+              >
+                {isMenuOpen ? (
+                  <X className="w-6 h-6" />
+                ) : (
+                  <Menu className="w-6 h-6" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Mobile Navigation */}
+          {isMenuOpen && (
+            <div className="md:hidden border-t border-gray-200 bg-white">
+              <div className="px-2 pt-2 pb-3 space-y-1">
+                <a
+                  href="/"
+                  className="block px-3 py-2 text-gray-600 hover:text-gray-900 rounded-md"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Beranda
+                </a>
+                <a
+                  href="/klasifikasi"
+                  className="block px-3 py-2 text-emerald-600 font-medium rounded-md"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Klasifikasi
+                </a>
+                <a
+                  href="/informasi"
+                  className="block px-3 py-2 text-gray-600 hover:text-gray-900 rounded-md"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Informasi
+                </a>
+              </div>
+            </div>
+          )}
         </div>
+      </nav>
 
-        <div className="grid lg:grid-cols-2 gap-6 md:gap-8">
-          <ImageUpload
-            onImageUpload={file => handleImageUpload(file)}
-            onImageRemove={handleReset}
-            loading={isProcessing}
-          />
-
-          <ClassificationResult
-            results={classification || []}
-            loading={isProcessing}
-          />
+      {/* Tabs: Camera / Lokasi */}
+      <div className="bg-gray-900 border-b border-gray-800">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex">
+            <button
+              className={`px-4 py-3 text-sm font-medium border-b-2 ${
+                activeTab === "camera"
+                  ? "border-emerald-500 text-emerald-400"
+                  : "border-transparent text-gray-400 hover:text-gray-200"
+              }`}
+              onClick={() => setActiveTab("camera")}
+            >
+              Kamera
+            </button>
+            <button
+              className={`px-4 py-3 text-sm font-medium border-b-2 ${
+                activeTab === "lokasi"
+                  ? "border-emerald-500 text-emerald-400"
+                  : "border-transparent text-gray-400 hover:text-gray-200"
+              }`}
+              onClick={() => setActiveTab("lokasi")}
+            >
+              Lokasi
+            </button>
+          </div>
         </div>
+      </div>
 
-        {classification && (
-          <div className="mt-8 md:mt-12">
-            <FacilityMap locations={facilities} />
+      {/* Content */}
+      <main className="flex-1 flex flex-col">
+        {activeTab === "camera" ? (
+          <LiveCameraView
+            onTabChange={setActiveTab}
+            enableRealTimeClassification={true}
+            classificationInterval={2000}
+            onClassificationResult={handleClassificationResult}
+          />
+        ) : (
+          <div className="flex-1 bg-gray-50 text-gray-900">
+            <div className="max-w-7xl mx-auto px-4 py-6 md:py-8">
+              <FacilityMap
+                locations={locations}
+                onLocationRoute={handleLocationRoute}
+                onLocationInfo={handleLocationInfo}
+                onFilterChange={handleFilterChange}
+                onTabChange={setActiveTab}
+                currentFilter={currentFilter}
+              />
+            </div>
           </div>
         )}
-      </div>
+      </main>
     </div>
   );
 }

@@ -5,10 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LocationCard } from "./location-card";
 
 const FacilityMap = ({
-  locations,
+  locations = [],
   onLocationRoute,
   onLocationInfo,
   onFilterChange,
+  onTabChange,
   currentFilter = "Semua",
   className = "",
 }) => {
@@ -197,6 +198,16 @@ const FacilityMap = ({
             )}
           </CardContent>
         </Card>
+      </div>
+
+      {/* Back to Camera on mobile */}
+      <div className="mt-6 md:hidden">
+        <button
+          onClick={() => onTabChange?.("camera")}
+          className="w-full bg-black text-white px-4 py-3 rounded-lg font-medium"
+        >
+          Kembali ke Kamera
+        </button>
       </div>
     </div>
   );

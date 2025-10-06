@@ -65,23 +65,23 @@
 
 ## Phase 3.4: Camera Integration & Real-time Processing
 
-- [ ] **T024** Create camera feed component in `components/camera/CameraFeed.jsx`
-- [ ] **T025** [P] Create bounding box overlay component in `components/camera/BoundingBox.jsx`
-- [ ] **T026** [P] Create classification result overlay in `components/camera/ClassificationOverlay.jsx`
-- [ ] **T027** Integrate camera permissions and stream handling in `CameraFeed.jsx`
-- [ ] **T028** Implement real-time frame capture and processing logic
-- [ ] **T029** [P] Add camera error handling and fallback states
-- [ ] **T030** [P] Optimize camera performance for mobile devices
+- [x] **T024** Create camera feed component in `components/classify/live-camera-view.jsx`
+- [x] **T025** [P] Create bounding box overlay component in `components/classify/bounding-box-overlay.jsx`
+- [x] **T026** [P] Create classification result overlay in `components/classify/classification-overlay.jsx`
+- [x] **T027** Integrate camera permissions and stream handling in `live-camera-view.jsx`
+- [x] **T028** Implement real-time frame capture and processing logic in `live-camera-view.jsx`
+- [x] **T029** [P] Add camera error handling and fallback states in `live-camera-view.jsx`
+- [x] **T030** [P] Optimize camera performance for mobile devices in `live-camera-view.jsx`
 
 ## Phase 3.5: Map Integration & Facility Display
 
-- [ ] **T031** [P] Create facility map component in `components/map/FacilityMap.jsx`
-- [ ] **T032** [P] Create facility marker component in `components/map/FacilityMarker.jsx`
-- [ ] **T033** Integrate map with facilities API in `FacilityMap.jsx`
-- [ ] **T034** [P] Add geolocation functionality for user position
-- [ ] **T035** [P] Implement facility filtering by waste category
-- [ ] **T036** [P] Add distance calculation and sorting
-- [ ] **T037** [P] Create facility detail popup/modal component
+- [x] **T031** [P] Create facility map component in `components/map/FacilityMap.jsx`
+- [x] **T032** [P] Create facility marker component in `components/map/FacilityMarker.jsx`
+- [x] **T033** Integrate map with facilities API in `FacilityMap.jsx`
+- [x] **T034** [P] Add geolocation functionality for user position
+- [x] **T035** [P] Implement facility filtering by waste category
+- [x] **T036** [P] Add distance calculation and sorting
+- [x] **T037** [P] Create facility detail popup/modal component
 
 ## Phase 3.6: Backend ML Service Implementation
 
