@@ -85,14 +85,14 @@
 
 ## Phase 3.6: Backend ML Service Implementation
 
-- [ ] **T038** [P] Create ML model wrapper classes in `ml-service/app/models/detector.py`
-- [ ] **T039** [P] Create classification service in `ml-service/app/models/classifier.py`
-- [ ] **T040** [P] Create image processing utilities in `ml-service/app/utils/image_processing.py`
-- [ ] **T041** Create inference service logic in `ml-service/app/services/inference.py`
-- [ ] **T042** Implement classification endpoint logic in FastAPI
-- [ ] **T043** [P] Add error handling and validation for ML service
-- [ ] **T044** [P] Setup model loading and caching in ML service
-- [ ] **T045** [P] Add request/response logging for ML endpoints
+- [x] **T038** [P] Create ML model wrapper classes in `ml-service/app/models/detector.py`
+- [x] **T039** [P] Create classification service in `ml-service/app/models/classifier.py`
+- [x] **T040** [P] Create image processing utilities in `ml-service/app/utils/image_processing.py`
+- [x] **T041** Create inference service logic in `ml-service/app/services/inference.py`
+- [x] **T042** Implement classification endpoint logic in FastAPI
+- [x] **T043** [P] Add error handling and validation for ML service
+- [x] **T044** [P] Setup model loading and caching in ML service
+- [x] **T045** [P] Add request/response logging for ML endpoints
 
 ## Phase 3.7: API Integration & Data Flow
 

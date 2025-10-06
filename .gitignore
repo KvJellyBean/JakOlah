@@ -2,10 +2,11 @@
 # model-result directory contains large trained ML models
 # These should be stored separately (Google Drive, LFS, etc.)
 model-result/
-*.pkl
-*.h5
-*.model
 *.bin
+
+# EXCEPTION: Allow ML service models (needed for deployment)
+!ml-service/models/*.pkl
+!ml-service/models/*.tflite
 
 # Training artifacts
 *.log
