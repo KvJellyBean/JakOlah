@@ -96,13 +96,13 @@
 
 ## Phase 3.7: API Integration & Data Flow
 
-- [ ] **T046** Connect frontend classification page to classify-frame API
-- [ ] **T047** Connect map component to facilities API
-- [ ] **T048** [P] Implement client-side image processing for API calls
-- [ ] **T049** [P] Add loading states and progress indicators
-- [ ] **T050** [P] Implement error handling for API failures
-- [ ] **T051** [P] Add request rate limiting and retry logic
-- [ ] **T052** [P] Setup session management for classifications
+- [x] **T046** Connect frontend classification page to classify-frame API
+- [x] **T047** Connect map component to facilities API
+- [x] **T048** [P] Implement client-side image processing for API calls
+- [x] **T049** [P] Add loading states and progress indicators
+- [x] **T050** [P] Implement error handling for API failures
+- [x] **T051** [P] Add request rate limiting and retry logic
+- [x] **T052** [P] Setup session management for classifications
 
 ## Phase 3.8: Testing & Validation
 
