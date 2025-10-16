@@ -1,4 +1,4 @@
-import { MapPin, Clock, Navigation } from "lucide-react";
+import { MapPin, Recycle, Navigation } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const LocationCard = ({
@@ -9,6 +9,7 @@ const LocationCard = ({
   hours,
   color,
   number,
+  wasteTypes = [],
   onRouteClick,
   className = "",
 }) => {
@@ -70,10 +71,12 @@ const LocationCard = ({
           <MapPin className="w-3 md:w-4 h-3 md:h-4" />
           <span>{address}</span>
         </p>
-        <p className="flex items-center space-x-2">
-          <Clock className="w-3 md:w-4 h-3 md:h-4" />
-          <span>Buka: {hours}</span>
-        </p>
+        {wasteTypes && wasteTypes.length > 0 && (
+          <p className="flex items-start space-x-2">
+            <Recycle className="w-3 md:w-4 h-3 md:h-4 mt-0.5 text-emerald-600" />
+            <span>Menerima: {wasteTypes.join(", ")}</span>
+          </p>
+        )}
       </div>
 
       <Button

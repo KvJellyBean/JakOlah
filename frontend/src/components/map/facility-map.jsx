@@ -23,6 +23,7 @@ const FacilityMap = ({
   onFilterChange,
   onTabChange,
   currentFilter = "Semua",
+  detectedWasteCategories = [],
   className = "",
 }) => {
   const [locations, setLocations] = useState([]);
@@ -132,8 +133,29 @@ const FacilityMap = ({
   const processedLocations = useMemo(() => {
     let filtered = locations;
 
-    // Apply category filter first
-    if (currentFilter && currentFilter !== "Semua") {
+    // SMART FILTERING: If waste detected, show facilities that accept it
+    if (
+      detectedWasteCategories &&
+      detectedWasteCategories.length > 0 &&
+      currentFilter === "Semua"
+    ) {
+      // Filter facilities that accept detected waste categories
+      filtered = locations.filter(facility => {
+        // Check if facility accepts any of the detected waste types
+        return (
+          facility.wasteTypes &&
+          facility.wasteTypes.some(wasteType =>
+            detectedWasteCategories.includes(wasteType)
+          )
+        );
+      });
+
+      // If no matching facilities, fallback to all
+      if (filtered.length === 0) {
+        filtered = locations;
+      }
+    } else if (currentFilter && currentFilter !== "Semua") {
+      // Apply category filter (manual filter)
       filtered = locations.filter(loc => loc.type === currentFilter);
     }
 
@@ -184,7 +206,7 @@ const FacilityMap = ({
       hours: loc.hours || "08:00 - 17:00",
       distance: loc.distance || null,
     }));
-  }, [locations, currentFilter, userLocation]);
+  }, [locations, currentFilter, userLocation, detectedWasteCategories]);
 
   // Pagination calculations
   const totalPages = Math.ceil(processedLocations.length / itemsPerPage);
@@ -383,6 +405,7 @@ const FacilityMap = ({
                     distance={location.distance}
                     address={location.address}
                     hours={location.hours}
+                    wasteTypes={location.wasteTypes}
                     color={location.color}
                     number={location.number}
                     onRouteClick={() => {
