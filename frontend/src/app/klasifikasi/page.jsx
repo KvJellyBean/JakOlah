@@ -10,6 +10,7 @@ export default function KlasifikasiPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("camera");
   const [currentFilter, setCurrentFilter] = useState("Semua");
+  const [detectedWasteCategories, setDetectedWasteCategories] = useState([]);
 
   // T052: Session management
   const { addClassification, getSessionSummary } = useClassificationSession();
@@ -32,6 +33,18 @@ export default function KlasifikasiPage() {
     // T052: Add to session tracking
     addClassification(result);
 
+    // Extract unique waste categories from detections
+    if (result.detections && result.detections.length > 0) {
+      const categories = [
+        ...new Set(
+          result.detections
+            .map(d => d.category)
+            .filter(c => c && c !== "Lainnya")
+        ),
+      ];
+      setDetectedWasteCategories(categories);
+    }
+
     // Optional: Log session summary for debugging
     if (process.env.NODE_ENV === "development") {
       const summary = getSessionSummary();
@@ -45,12 +58,15 @@ export default function KlasifikasiPage() {
       <nav className="bg-white text-gray-900 border-b border-gray-200 sticky top-0 z-[9999]">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3">
+            <a
+              href="/"
+              className="flex items-center space-x-3 hover:opacity-80 transition-opacity"
+            >
               <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
                 <Leaf className="w-5 h-5 text-white" />
               </div>
               <span className="text-xl font-semibold">JakOlah</span>
-            </div>
+            </a>
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-8">
@@ -163,6 +179,7 @@ export default function KlasifikasiPage() {
                 onFilterChange={handleFilterChange}
                 onTabChange={setActiveTab}
                 currentFilter={currentFilter}
+                detectedWasteCategories={detectedWasteCategories}
               />
             </div>
           </div>
