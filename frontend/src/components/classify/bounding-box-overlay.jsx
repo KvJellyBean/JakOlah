@@ -14,7 +14,36 @@ const BoundingBoxOverlay = ({ detections = [], videoSize, className = "" }) => {
       preserveAspectRatio="xMidYMid slice"
     >
       {detections.map((detection, index) => {
-        const { x, y, width, height, label, confidence } = detection;
+        // Extract bbox coordinates (handle both flat and nested bbox)
+        const bbox = detection.bbox || detection;
+        const { x, y, width, height } = bbox;
+        const category = detection.category || detection.label;
+        const confidence = detection.confidence;
+
+        // Validate coordinates - skip if invalid
+        if (
+          !Number.isFinite(x) ||
+          !Number.isFinite(y) ||
+          !Number.isFinite(width) ||
+          !Number.isFinite(height)
+        ) {
+          console.warn(
+            `Invalid bbox coordinates for detection ${index}:`,
+            detection
+          );
+          return null;
+        }
+
+        // Skip if width or height is 0 or negative
+        if (width <= 0 || height <= 0) {
+          console.warn(`Invalid bbox size for detection ${index}:`, {
+            x,
+            y,
+            width,
+            height,
+          });
+          return null;
+        }
 
         // Color based on waste category
         const colorMap = {
@@ -23,7 +52,7 @@ const BoundingBoxOverlay = ({ detections = [], videoSize, className = "" }) => {
           lainnya: "#eab308", // yellow
         };
 
-        const color = colorMap[label?.toLowerCase()] || "#6b7280"; // default gray
+        const color = colorMap[category?.toLowerCase()] || "#6b7280"; // default gray
 
         return (
           <g key={`detection-${index}`}>
@@ -112,7 +141,7 @@ const BoundingBoxOverlay = ({ detections = [], videoSize, className = "" }) => {
             <rect
               x={x}
               y={y - 30}
-              width={Math.max(label?.length * 8 + 40, 100)}
+              width={Math.max((category?.length || 0) * 8 + 40, 100)}
               height="28"
               fill={color}
               rx="4"
@@ -128,7 +157,8 @@ const BoundingBoxOverlay = ({ detections = [], videoSize, className = "" }) => {
               fontWeight="600"
               fontFamily="system-ui, -apple-system, sans-serif"
             >
-              {label} {confidence ? `${Math.round(confidence * 100)}%` : ""}
+              {category || "Unknown"}{" "}
+              {confidence ? `${Math.round(confidence * 100)}%` : ""}
             </text>
           </g>
         );

@@ -52,6 +52,8 @@ const LiveCameraView = ({
       streamRef.current = null;
     }
     setIsStreaming(false);
+    // Clear detections when camera stops
+    setDetections([]);
   }, []);
 
   const applyStreamToVideo = useCallback(stream => {
@@ -124,6 +126,8 @@ const LiveCameraView = ({
       setIsProcessing(true);
       setProcessingError(null);
 
+      console.log("🎥 [Camera] Starting frame processing...");
+
       // Capture frame from video
       if (!videoRef.current || !canvasRef.current) {
         throw new Error("Camera not ready");
@@ -137,18 +141,26 @@ const LiveCameraView = ({
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
 
+      console.log(`📐 [Camera] Canvas size: ${canvas.width}x${canvas.height}`);
+
       // Draw video frame
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
       // T048: Optimize image before upload (max 1280x720, quality 0.8)
+      console.log("[Camera] Optimizing image...");
       const optimizedBlob = await optimizeImage(canvas, {
         quality: 0.8,
         maxWidth: 1280,
         maxHeight: 720,
       });
 
+      console.log(`[Camera] Optimized blob size: ${optimizedBlob.size} bytes`);
+
       // T046: Call ML service with optimized image
+      console.log("[Camera] Calling ML API...");
       const result = await classifyFrame(optimizedBlob);
+
+      console.log("[Camera] API Response:", result);
 
       // Success - reset retry count
       setRetryCount(0);
@@ -156,6 +168,8 @@ const LiveCameraView = ({
       // Process detections
       if (result.success && result.data && result.data.detections) {
         const { detections, metadata } = result.data;
+
+        console.log(`[Camera] Found ${detections.length} detections`);
 
         // Transform detections to component format
         const transformedDetections = detections.map(detection => ({
@@ -176,31 +190,38 @@ const LiveCameraView = ({
           },
         });
       } else {
+        console.log("[Camera] No detections found");
         setDetections([]);
       }
     } catch (error) {
-      console.error("Frame processing error:", error);
+      console.error("[Camera] Frame processing error:", error);
+      console.error("[Camera] Error details:", {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+      });
 
       // T050: Error handling with user feedback
       setProcessingError(error.message);
 
       // T051: Retry logic (max 3 attempts)
       if (retryCount < MAX_RETRIES) {
-        setRetryCount(prev => prev + 1);
-        console.log(`Retrying... (${retryCount + 1}/${MAX_RETRIES})`);
+        const nextRetry = retryCount + 1;
+        setRetryCount(nextRetry);
+        const backoffMs = Math.min(1000 * Math.pow(2, retryCount), 5000);
+        console.log(
+          `⏳ [Camera] Retrying ${nextRetry}/${MAX_RETRIES} in ${backoffMs}ms...`
+        );
 
         // Retry after delay (exponential backoff)
-        setTimeout(
-          () => {
-            processingRef.current = false;
-            processFrame();
-          },
-          Math.min(1000 * Math.pow(2, retryCount), 5000)
-        );
+        setTimeout(() => {
+          processingRef.current = false;
+          processFrame();
+        }, backoffMs);
       } else {
         // Max retries reached - show persistent error
         console.error(
-          "Max retries reached. Please check ML service connection."
+          "💥 [Camera] Max retries reached. Please check ML service connection."
         );
       }
     } finally {
