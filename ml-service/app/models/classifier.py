@@ -38,12 +38,36 @@ class WasteClassifier:
         self._load_model()
     
     def _load_model(self):
-        """Load pickled SVM model"""
+        """Load pickled SVM model with multiple fallback methods"""
         try:
             logger.info(f"Loading classification model from {self.model_path}")
             
-            with open(self.model_path, 'rb') as f:
-                model_data = pickle.load(f)
+            # Try Method 1: Standard pickle
+            try:
+                with open(self.model_path, 'rb') as f:
+                    model_data = pickle.load(f)
+                logger.info("✓ Loaded with pickle")
+            except Exception as e1:
+                logger.warning(f"pickle failed: {e1}")
+                
+                # Try Method 2: joblib
+                try:
+                    import joblib
+                    model_data = joblib.load(self.model_path)
+                    logger.info("✓ Loaded with joblib")
+                except Exception as e2:
+                    logger.warning(f"joblib failed: {e2}")
+                    
+                    # Try Method 3: pickle with different protocol
+                    try:
+                        import pickle5 as pickle_fallback
+                        with open(self.model_path, 'rb') as f:
+                            model_data = pickle_fallback.load(f)
+                        logger.info("✓ Loaded with pickle5")
+                    except:
+                        # Final fallback: Try reading as binary and unpickling
+                        logger.error("All loading methods failed!")
+                        raise Exception(f"Cannot load model file. Tried pickle, joblib, pickle5. Original errors: pickle={e1}, joblib={e2}")
             
             # Check if model is dict with separate components or just SVM
             if isinstance(model_data, dict):
@@ -84,8 +108,8 @@ class WasteClassifier:
             elif hasattr(self.model, 'decision_function'):
                 # For SVM without probability=True, use decision function
                 decision_scores = self.model.decision_function(features)[0]
-                # Convert to pseudo-probabilities using softmax
-                probabilities = self._softmax(decision_scores)
+                # Use CALIBRATED conversion for better confidence estimates
+                probabilities = self._calibrate_scores(decision_scores)
             else:
                 # Fallback: assign 1.0 to predicted class, 0.0 to others
                 probabilities = np.zeros(len(self.CATEGORIES))
@@ -101,29 +125,12 @@ class WasteClassifier:
                 for i in range(len(self.CATEGORIES))
             }
             
-            logger.info(f"Classified as {category_name} with confidence {confidence:.2f}")
             return category_name, confidence, all_confidences
             
         except Exception as e:
             logger.error(f"Classification failed: {e}")
             # Return default
             return "Lainnya", 0.0, {cat: 0.0 for cat in self.CATEGORIES.values()}
-    
-    def classify_batch(self, features_list: list) -> list:
-        """
-        Classify multiple waste objects
-        
-        Args:
-            features_list: List of feature arrays
-            
-        Returns:
-            List of (category, confidence, all_confidences) tuples
-        """
-        results = []
-        for features in features_list:
-            result = self.classify(features)
-            results.append(result)
-        return results
     
     def _softmax(self, x: np.ndarray) -> np.ndarray:
         """
@@ -144,20 +151,17 @@ class WasteClassifier:
             exp_x = np.exp(x - np.max(x, axis=1, keepdims=True))
             return exp_x / exp_x.sum(axis=1, keepdims=True)
     
-    @staticmethod
-    def get_category_color(category: str) -> str:
+    def _calibrate_scores(self, scores: np.ndarray) -> np.ndarray:
         """
-        Get display color for category
+        Apply temperature scaling to decision scores for better calibration
+        Uses temperature T=2.0 to reduce overconfidence
         
         Args:
-            category: Category name
+            scores: Raw decision function scores
             
         Returns:
-            Color string (for frontend)
+            Calibrated probabilities
         """
-        colors = {
-            "Organik": "#22c55e",      # green-500
-            "Anorganik": "#3b82f6",    # blue-500
-            "Lainnya": "#eab308"       # yellow-500
-        }
-        return colors.get(category, "#6b7280")  # gray-500 default
+        temperature = 2.0  # Higher = more uncertain, lower = more confident
+        scaled_scores = scores / temperature
+        return self._softmax(scaled_scores)
