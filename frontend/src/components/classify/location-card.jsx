@@ -13,31 +13,19 @@ const LocationCard = ({
   onRouteClick,
   className = "",
 }) => {
-  const colorClasses = {
-    emerald: {
-      bg: "bg-emerald-500",
-      badge: "bg-emerald-100 text-emerald-700",
-    },
-    blue: {
-      bg: "bg-blue-500",
-      badge: "bg-blue-100 text-blue-700",
-    },
-    purple: {
-      bg: "bg-purple-500",
-      badge: "bg-purple-100 text-purple-700",
-    },
-    orange: {
-      bg: "bg-orange-500",
-      badge: "bg-orange-100 text-orange-700",
-    },
-    red: {
-      bg: "bg-red-500",
-      badge: "bg-red-100 text-red-700",
-    },
+  // Helper function to lighten color for badge background
+  const lightenColor = hexColor => {
+    // Remove # if present
+    const hex = hexColor?.replace("#", "") || "10b981";
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, 0.15)`;
   };
 
-  // Fallback to emerald if color not found
-  const currentColor = colorClasses[color] || colorClasses.emerald;
+  // Use hex color directly, fallback to emerald
+  const markerColor = color || "#10b981";
+  const badgeBgColor = lightenColor(markerColor);
 
   return (
     <div
@@ -46,7 +34,8 @@ const LocationCard = ({
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center space-x-3">
           <div
-            className={`w-5 md:w-6 h-5 md:h-6 ${currentColor.bg} rounded-full border-2 border-white shadow-sm flex items-center justify-center text-white font-bold text-xs`}
+            style={{ backgroundColor: markerColor }}
+            className={`w-5 md:w-6 h-5 md:h-6 rounded-full border-2 border-white shadow-sm flex items-center justify-center text-white font-bold text-xs`}
           >
             {number}
           </div>
@@ -55,7 +44,11 @@ const LocationCard = ({
               {name}
             </h4>
             <div
-              className={`px-2 py-1 ${currentColor.badge} rounded text-xs font-medium inline-block mt-1`}
+              style={{
+                backgroundColor: badgeBgColor,
+                color: markerColor,
+              }}
+              className={`px-2 py-1 rounded text-xs font-medium inline-block mt-1`}
             >
               {type}
             </div>
