@@ -16,9 +16,8 @@ const HeroSection = ({ onGetStartedClick, className = "" }) => {
               <span className="text-emerald-600">Selamatkan Bumi</span>
             </h1>
             <p className="text-lg md:text-xl max-md:text-center text-gray-600 mb-9 !leading-relaxed">
-              Aplikasi pintar yang membantu Anda mengidentifikasi jenis sampah
-              rumah tangga dengan teknologi AI dan memberikan panduan daur ulang
-              yang tepat.
+              Aplikasi pintar untuk klasifikasi sampah rumah tangga secara
+              real-time dengan teknologi Machine Learning.
             </p>
             <Link
               href="/klasifikasi"

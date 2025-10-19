@@ -39,9 +39,9 @@ const Footer = ({ className = "" }) => {
               clickable={false}
             />
             <p className="text-gray-300 leading-relaxed">
-              Aplikasi edukasi berbasis web yang membantu mengidentifikasi dan
-              mengelola sampah rumah tangga dengan teknologi AI untuk lingkungan
-              yang lebih bersih.
+              Aplikasi klasifikasi sampah real-time berbasis web dengan
+              teknologi Machine Learning. Membantu warga Jakarta mengenali jenis
+              sampah dan menemukan lokasi TPS terdekat.
             </p>
           </div>
 

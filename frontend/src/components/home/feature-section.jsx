@@ -1,27 +1,27 @@
-import { Camera, BookOpen, Users } from "lucide-react";
+import { Camera, MapPin, Smartphone } from "lucide-react";
 import { FeatureCard } from "./feature-card";
 
 const FeatureSection = ({ className = "" }) => {
   const features = [
     {
-      title: "Klasifikasi Otomatis",
+      title: "Klasifikasi Real-time",
       description:
-        "Identifikasi jenis sampah secara otomatis menggunakan teknologi AI dengan akurasi tinggi",
+        "Klasifikasi sampah secara real-time melalui kamera dengan teknologi Machine Learning",
       icon: <Camera className="w-6 md:w-8 h-6 md:h-8" />,
       iconColor: "blue",
     },
     {
-      title: "Edukasi Lengkap",
+      title: "Peta Lokasi TPS",
       description:
-        "Pelajari cara memilah, mengolah, dan mendaur ulang berbagai jenis sampah dengan benar",
-      icon: <BookOpen className="w-6 md:w-8 h-6 md:h-8" />,
+        "Temukan lokasi Tempat Penampungan Sampah (TPS) terdekat di Jakarta dengan peta interaktif",
+      icon: <MapPin className="w-6 md:w-8 h-6 md:h-8" />,
       iconColor: "emerald",
     },
     {
-      title: "Komunitas Peduli",
+      title: "Kompatibel Semua Perangkat",
       description:
-        "Bergabung dengan komunitas yang peduli lingkungan dan berbagi tips daur ulang",
-      icon: <Users className="w-6 md:w-8 h-6 md:h-8" />,
+        "Akses dari perangkat apapun seperti PC, laptop, smartphone Android dan iOS melalui browser",
+      icon: <Smartphone className="w-6 md:w-8 h-6 md:h-8" />,
       iconColor: "purple",
     },
   ];
