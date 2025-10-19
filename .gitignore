@@ -1,0 +1,155 @@
+# ===== ML MODELS & TRAINING DATA =====
+# model-result directory contains large trained ML models
+# These should be stored separately (Google Drive, LFS, etc.)
+model-result/
+*.bin
+
+# EXCEPTION: Allow ML service models (needed for deployment)
+!ml-service/models/*.pkl
+!ml-service/models/*.tflite
+
+# Training artifacts
+*.log
+wandb/
+mlruns/
+.mlflow/
+
+# ===== ENVIRONMENT & SECRETS =====
+# Environment variables with API keys
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# API keys and secrets
+secrets.json
+.secrets/
+
+# ===== NODE.JS & NPM =====
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Next.js build outputs
+.next/
+out/
+build/
+
+# Next.js cache
+.next/cache/
+
+# ===== PYTHON & VIRTUAL ENVIRONMENTS =====
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+.env/
+
+# PyTorch/TensorFlow cache
+.cache/
+.torch/
+.tensorflow/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# ===== DATABASES & STORAGE =====
+# Local SQLite databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Database dumps
+*.dump
+*.sql.gz
+
+# Supabase local
+.supabase/
+
+# ===== IDE & EDITORS =====
+# VS Code
+.vscode/settings.json
+.vscode/launch.json
+.vscode/extensions.json
+!.vscode/tasks.json
+!.vscode/workspace.json
+
+# JetBrains IDEs
+.idea/
+*.iml
+.specify/
+
+# ===== OPERATING SYSTEM =====
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+
+# ===== LOGS & TEMPORARY FILES =====
+# Application logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+.temp/
+
+# ===== BUILD & DEPLOYMENT =====
+# Docker
+.dockerignore
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# ===== TESTING =====
+# Test coverage
+coverage/
+*.coverage
+.nyc_output/
+.coverage/
+
+# ===== DOCUMENTATION BUILD =====
+# Sphinx documentation
+docs/_build/
+
+# ===== GITHUB INTERNAL =====
+.github/
+
+# Classification results cache
+classification_cache/
+temp_classifications/
