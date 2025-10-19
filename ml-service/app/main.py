@@ -38,8 +38,9 @@ app.add_middleware(
 # Model paths
 BASE_DIR = Path(__file__).parent.parent  # ml-service directory
 MODELS_DIR = BASE_DIR / "models"
-DETECTOR_PATH = MODELS_DIR / "model.tflite"
+DETECTOR_PATH = MODELS_DIR / "best.pt"
 CLASSIFIER_PATH = MODELS_DIR / "MobileNetV3_poly_model.pkl"
+SCALER_PATH = MODELS_DIR / "mobilenet_scaler.pkl"  # CRITICAL!
 
 # Global inference service
 inference_service = None
@@ -53,24 +54,27 @@ async def startup_event():
     try:
         logger.info("Loading ML models...")
         
-        # Check if model files exist
-        if not DETECTOR_PATH.exists():
-            logger.error(f"Detector model not found: {DETECTOR_PATH}")
-            logger.error("Please copy model.tflite to ml-service/models/ folder")
-            return
-        
+        # Check required files
         if not CLASSIFIER_PATH.exists():
             logger.error(f"Classifier model not found: {CLASSIFIER_PATH}")
             logger.error("Please copy MobileNetV3_poly_model.pkl to ml-service/models/ folder")
             return
         
-        # Initialize inference service
+        if not SCALER_PATH.exists():
+            logger.error(f"StandardScaler not found: {SCALER_PATH}")
+            logger.error("Please copy mobilenet_scaler.pkl to ml-service/models/ folder")
+            logger.error("WITHOUT scaler, predictions will be INCORRECT!")
+            return
+        
+        # Initialize inference service with YOLO + MobileNetV3 classifier + Scaler
         inference_service = get_inference_service(
-            detector_path=str(DETECTOR_PATH),
-            classifier_path=str(CLASSIFIER_PATH)
+            detector_path=str(DETECTOR_PATH),  # YOLO auto-downloads
+            classifier_path=str(CLASSIFIER_PATH),
+            scaler_path=str(SCALER_PATH),  # CRITICAL!
+            confidence_threshold=0.4
         )
         
-        logger.info("✓ ML models loaded successfully")
+        logger.info("✓ ML models loaded successfully (YOLO + MobileNetV3 SVM + StandardScaler)")
         
     except Exception as e:
         logger.error(f"Failed to load models: {e}")
