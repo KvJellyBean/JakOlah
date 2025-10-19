@@ -15,23 +15,22 @@ export default function InformasiPage() {
     {
       question: "Bagaimana cara menggunakan aplikasi ini?",
       answer:
-        "Untuk menggunakan JakOlah, cukup upload foto sampah Anda di halaman Klasifikasi. Aplikasi akan secara otomatis menganalisis gambar dan memberikan hasil klasifikasi beserta rekomendasi pengelolaan yang tepat.",
+        "Buka halaman Klasifikasi, lalu pilih tab 'Kamera' untuk mengklasifikasi sampah secara real-time dengan mengarahkan kamera. Aplikasi akan menampilkan hasil dengan bounding box berwarna. Untuk mencari lokasi TPS, klik tab 'Lokasi' dan aplikasi akan menampilkan TPS terdekat dengan Anda di Jakarta.",
     },
     {
       question: "Apa saja jenis sampah yang dapat dikenali aplikasi?",
       answer:
-        "JakOlah dapat mengenali tiga kategori utama: Sampah Organik (sisa makanan, daun, kulit buah), Sampah Anorganik (plastik, kertas, logam, kaca), dan Sampah Lainnya (baterai, lampu, obat kadaluarsa).",
+        "JakOlah dapat mengenali tiga kategori utama: Sampah Organik (sisa makanan, daun, kulit buah pisang), Sampah Anorganik (plastik, kertas, logam, kaca), dan Sampah Lainnya (masker bekas, baterai, bohlam, korek gas, kabel, styrofoam, kain perca, popok bekas).",
     },
     {
       question: "Apakah data dan gambar saya aman?",
       answer:
-        "Ya, keamanan data Anda adalah prioritas kami. Semua gambar yang diupload diproses secara lokal dan tidak disimpan di server kami. Data pribadi Anda dilindungi dengan enkripsi standar industri.",
+        "Ya, keamanan data Anda terjamin. Semua proses klasifikasi dilakukan dengan mengirim frame kamera ke server ML untuk dianalisis, kemudian server langsung mengembalikan hasil tanpa menyimpan gambar. Tidak ada gambar atau data pribadi yang tersimpan di server kami.",
     },
     {
-      question:
-        "Apa itu LLM yang digunakan untuk memberikan rekomendasi edukasi?",
+      question: "Apa teknologi yang digunakan untuk klasifikasi?",
       answer:
-        "LLM (Large Language Model) adalah teknologi AI yang kami gunakan untuk menghasilkan rekomendasi edukatif yang personal dan relevan berdasarkan hasil klasifikasi sampah Anda.",
+        "JakOlah menggunakan kombinasi model deteksi objek sampah dalam frame kamera, dan gabungan CNN (Convolutional Neural Network) dengan SVM (Support Vector Machine) untuk mengklasifikasikan kategori sampah. Model dilatih dengan 18,000+ gambar sampah.",
     },
     {
       question: "Seberapa akurat hasil klasifikasi aplikasi ini?",
@@ -84,12 +83,11 @@ export default function InformasiPage() {
                     Apa itu JakOlah?
                   </h3>
                   <p className="text-gray-700 leading-relaxed">
-                    JakOlah adalah aplikasi edukasi berbasis web yang membantu
-                    mengidentifikasi dan mengelola sampah rumah tangga dengan
-                    teknologi AI. Aplikasi ini dirancang khusus untuk membantu
-                    masyarakat Jakarta dan Indonesia dalam mengenali jenis
-                    sampah serta memberikan panduan pengelolaan yang tepat untuk
-                    lingkungan yang lebih bersih.
+                    JakOlah adalah aplikasi klasifikasi sampah real-time
+                    berbasis web menggunakan teknologi Machine Learning.
+                    Aplikasi ini dirancang khusus untuk membantu masyarakat
+                    Jakarta mengenali jenis sampah secara otomatis menggunakan
+                    kamera dan menemukan lokasi TPS terdekat.
                   </p>
                 </div>
 
@@ -99,14 +97,14 @@ export default function InformasiPage() {
                   </h3>
                   <div className="grid md:grid-cols-2 gap-4">
                     <ul className="space-y-2 text-gray-700">
-                      <li>• Klasifikasi sampah otomatis dengan AI</li>
-                      <li>• Rekomendasi pengelolaan yang tepat</li>
+                      <li>• Klasifikasi sampah real-time</li>
+                      <li>• Deteksi multi-objek dengan bounding box</li>
                       <li>• Interface yang mudah digunakan</li>
                     </ul>
                     <ul className="space-y-2 text-gray-700">
-                      <li>• Edukasi lingkungan berbasis teknologi</li>
-                      <li>• Peta lokasi fasilitas daur ulang</li>
-                      <li>• Riwayat klasifikasi pengguna</li>
+                      <li>• Peta lokasi 4000+ TPS di Jakarta</li>
+                      <li>• Kompatibel semua perangkat (PWA)</li>
+                      <li>• Tidak perlu install aplikasi</li>
                     </ul>
                   </div>
                 </div>
@@ -134,9 +132,11 @@ export default function InformasiPage() {
                     Kevin Natanael
                   </h3>
                   <p className="text-gray-700 leading-relaxed mb-4">
-                    Mahasiswa Informatika yang passionate terhadap teknologi AI
-                    dan pengembangan web. JakOlah dikembangkan sebagai proyek
-                    untuk mendukung edukasi lingkungan melalui teknologi modern.
+                    Mahasiswa Informatika yang passionate terhadap teknologi
+                    Machine Learning dan pengembangan web. <br />
+                    JakOlah dikembangkan sebagai proyek untuk membantu
+                    masyarakat Jakarta mengelola sampah melalui teknologi
+                    modern.
                   </p>
                   <div className="flex space-x-4 text-sm max-md:flex-col max-md:space-x-0 max-md:space-y-2">
                     <span className="text-gray-600">
@@ -190,8 +190,6 @@ export default function InformasiPage() {
                     <li>• TensorFlow/PyTorch</li>
                     <li>• Supabase Database</li>
                     <li>• Tailwind CSS</li>
-                    <li>• Computer Vision AI</li>
-                    <li>• Large Language Model</li>
                   </ul>
                 </div>
 
@@ -200,11 +198,10 @@ export default function InformasiPage() {
                     Dataset & Model
                   </h3>
                   <ul className="space-y-2 text-gray-700">
-                    <li>• 3000+ gambar sampah terklasifikasi</li>
+                    <li>• 18,000+ gambar sampah untuk training</li>
                     <li>• Akurasi model: ~87%</li>
                     <li>• 3 kategori: Organik, Anorganik, Lainnya</li>
-                    <li>• Transfer learning dengan CNN</li>
-                    <li>• Continuous learning system</li>
+                    <li>• CNN-SVM untuk klasifikasi kategori</li>
                   </ul>
                 </div>
               </div>
