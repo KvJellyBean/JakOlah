@@ -22,9 +22,6 @@ export async function getFacilities({
 } = {}) {
   try {
     if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-      console.error(
-        "[API] Supabase not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local"
-      );
       throw new Error(
         "Supabase credentials not configured. Check .env.local file."
       );
@@ -47,15 +44,11 @@ export async function getFacilities({
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Supabase RPC error:", errorText);
       throw new Error(`Facilities API error: ${response.status}`);
     }
 
-    const data = await response.json();
-    return data;
+    return await response.json();
   } catch (error) {
-    console.error("Error fetching facilities:", error);
     throw error;
   }
 }
@@ -67,60 +60,27 @@ export async function getFacilities({
  */
 export async function classifyFrame(imageBlob) {
   try {
-    console.log("[API] classifyFrame called");
-    console.log(`[API] Image blob size: ${imageBlob.size} bytes`);
-    console.log(`[API] ML Service URL: ${ML_SERVICE_URL}`);
-
     if (!ML_SERVICE_URL) {
-      console.error(
-        "[API] ML Service not configured. Please set NEXT_PUBLIC_ML_SERVICE_URL in .env.local"
-      );
       throw new Error("ML Service URL not configured");
     }
 
     const formData = new FormData();
     formData.append("image", imageBlob, "frame.jpg");
 
-    console.log(`[API] Sending POST to ${ML_SERVICE_URL}/api/classify-frame`);
-
     const response = await fetch(`${ML_SERVICE_URL}/api/classify-frame`, {
       method: "POST",
       body: formData,
     });
 
-    console.log(
-      `[API] Response status: ${response.status} ${response.statusText}`
-    );
-
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.error("[API] Classification failed:", errorData);
       throw new Error(
         errorData.detail || `Classification failed: ${response.status}`
       );
     }
 
-    const data = await response.json();
-    console.log("[API] Classification success:");
-    console.log("[API] Full response:", JSON.stringify(data, null, 2));
-    console.log(`[API] Success: ${data.success}`);
-    console.log(
-      `[API] Detections count: ${data.data?.detections?.length || 0}`
-    );
-    if (data.data?.detections) {
-      console.log("[API] Detections:", data.data.detections);
-    }
-    if (data.data?.metadata) {
-      console.log("[API] Metadata:", data.data.metadata);
-    }
-    return data;
+    return await response.json();
   } catch (error) {
-    console.error("[API] Error classifying frame:", error);
-    console.error("[API] Error details:", {
-      message: error.message,
-      stack: error.stack,
-      name: error.name,
-    });
     throw error;
   }
 }
@@ -139,7 +99,6 @@ export async function checkMLServiceHealth() {
 
     return await response.json();
   } catch (error) {
-    console.error("ML service health check failed:", error);
     throw error;
   }
 }
