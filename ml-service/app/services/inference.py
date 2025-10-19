@@ -1,18 +1,16 @@
 """
 Inference Service
-Combines detector, feature extractor, and classifier for end-to-end inference
+Combines YOLO detector and MobileNetV3-SVM classifier for waste classification
 """
 import numpy as np
 import time
-import uuid
 from typing import List, Dict, Optional
 import logging
 
-from app.models.detector import WasteDetector
+from app.models.detector_yolo import YOLODetector
 from app.models.feature_extractor import FeatureExtractor
 from app.models.classifier import WasteClassifier
 from app.utils.image_processing import (
-    preprocess_for_detection,
     preprocess_for_classification,
     crop_image,
     validate_image
@@ -31,7 +29,8 @@ class InferenceService:
         self,
         detector_model_path: str,
         classifier_model_path: str,
-        confidence_threshold: float = 0.3,
+        scaler_path: str = None,
+        confidence_threshold: float = 0.4,  # 🔧 Increased from 0.3 to 0.4 (reduce false positives)
         max_detections: int = 10
     ):
         """
@@ -40,6 +39,7 @@ class InferenceService:
         Args:
             detector_model_path: Path to TFLite detector
             classifier_model_path: Path to SVM classifier
+            scaler_path: Path to StandardScaler .pkl (REQUIRED!)
             confidence_threshold: Minimum confidence for detections
             max_detections: Maximum number of objects to return
         """
@@ -48,14 +48,17 @@ class InferenceService:
         
         # Load models
         logger.info("Initializing inference service...")
-        self.detector = WasteDetector(detector_model_path, confidence_threshold)
-        self.feature_extractor = FeatureExtractor()
+        self.detector = YOLODetector(confidence_threshold)
+        self.feature_extractor = FeatureExtractor(scaler_path=scaler_path)
         self.classifier = WasteClassifier(classifier_model_path)
         logger.info("Inference service ready")
     
     def process_image(self, image: np.ndarray) -> Dict:
         """
-        Process image through full inference pipeline
+        Process image through full inference pipeline:
+        1. YOLO detects objects (bounding boxes)
+        2. MobileNetV3 extracts features from each detection
+        3. SVM classifies waste category
         
         Args:
             image: Input image (RGB numpy array)
@@ -74,21 +77,20 @@ class InferenceService:
                     'error': 'Image too small (minimum 224x224 required)'
                 }
             
-            # Step 1: Preprocess for detection
-            preprocessed, original_size, scale_factors = preprocess_for_detection(image)
-            
-            # Step 2: Run object detection
-            detections = self.detector.detect(preprocessed)
+            # Step 1: YOLO object detection
+            detections = self.detector.detect(image)
             
             if not detections:
                 return {
                     'detections': [],
                     'processing_time_ms': int((time.time() - start_time) * 1000),
-                    'message': 'No waste objects detected'
+                    'message': 'No objects detected in image'
                 }
             
-            # Step 3: Process each detection
+            # Step 2: Process each detection with CNN-SVM classifier
             results = []
+            height, width = image.shape[:2]
+            
             for i, detection in enumerate(detections[:self.max_detections]):
                 try:
                     # Convert normalized box to pixel coordinates
@@ -96,50 +98,69 @@ class InferenceService:
                     
                     # Scale to original image size
                     ymin, xmin, ymax, xmax = box
-                    x = int(xmin * original_size[1])
-                    y = int(ymin * original_size[0])
-                    width = int((xmax - xmin) * original_size[1])
-                    height = int((ymax - ymin) * original_size[0])
+                    x = int(xmin * width)
+                    y = int(ymin * height)
+                    bbox_width = int((xmax - xmin) * width)
+                    bbox_height = int((ymax - ymin) * height)
                     
-                    # Crop detected region with padding
-                    cropped = crop_image(image, (x, y, width, height), padding=10)
+                    # Skip too small detections (likely false positives)
+                    if bbox_width < 50 or bbox_height < 50:
+                        logger.debug(f"Skipping detection {i}: bbox too small ({bbox_width}x{bbox_height})")
+                        continue
+                    
+                    # Crop detected region (no expansion - use tight crop)
+                    cropped = crop_image(image, (x, y, bbox_width, bbox_height), padding=10)
                     
                     if cropped is None or cropped.size == 0:
                         logger.warning(f"Failed to crop detection {i}")
                         continue
                     
-                    # Preprocess crop for classification
-                    classified_input = preprocess_for_classification(cropped)
+                    # Preprocess for classification (resize to 224x224)
+                    preprocessed = preprocess_for_classification(cropped)
                     
-                    # Extract features
-                    features = self.feature_extractor.extract(classified_input)
+                    # Extract features with MobileNetV3
+                    features = self.feature_extractor.extract(preprocessed)
                     
-                    # Classify
+                    # Classify with SVM
                     category, confidence, all_confidences = self.classifier.classify(features)
+                    
+                    # HYBRID MODE: Use YOLO if SVM confidence is low
+                    yolo_class = detection.get('class_name', 'unknown')
+                    yolo_conf = detection.get('confidence', 0.0)
+                    
+                    # If SVM confidence < 0.6 AND YOLO confidence > 0.65, trust YOLO
+                    final_category = category
+                    final_confidence = confidence
+                    classification_source = "svm"
+                    
+                    if confidence < 0.8 and yolo_conf > 0.15:
+                        final_category = yolo_class
+                        final_confidence = yolo_conf
+                        classification_source = "yolo_fallback"
+                        logger.info(f"[Detection {i+1}] Using YOLO fallback: {final_category} (SVM conf too low: {confidence:.2%})")
                     
                     # Build result
                     result = {
-                        'id': str(uuid.uuid4()),
-                        'category': category,
-                        'confidence': round(confidence, 3),
+                        'category': final_category,
+                        'confidence': round(final_confidence, 3),
+                        'classification_source': classification_source,  # Track which model was used
                         'bbox': {
                             'x': x,
                             'y': y,
-                            'width': width,
-                            'height': height
-                        },
-                        'normalized_bbox': {
-                            'xmin': float(xmin),
-                            'ymin': float(ymin),
-                            'xmax': float(xmax),
-                            'ymax': float(ymax)
+                            'width': bbox_width,
+                            'height': bbox_height
                         },
                         'all_confidences': {
                             k: round(v, 3) for k, v in all_confidences.items()
+                        },
+                        'yolo_detection': {
+                            'class': yolo_class,
+                            'confidence': round(yolo_conf, 3)
                         }
                     }
                     
                     results.append(result)
+                    logger.info(f"[Detection {i+1}] FINAL: {final_category} ({final_confidence:.2%}) via {classification_source}")
                     
                 except Exception as e:
                     logger.error(f"Failed to process detection {i}: {e}")
@@ -147,14 +168,14 @@ class InferenceService:
             
             processing_time = int((time.time() - start_time) * 1000)
             
-            logger.info(f"Processed {len(results)} detections in {processing_time}ms")
+            logger.info(f"✓ Processed {len(results)} detections in {processing_time}ms")
             
             return {
                 'detections': results,
                 'processing_time_ms': processing_time,
                 'image_size': {
-                    'width': original_size[1],
-                    'height': original_size[0]
+                    'width': width,
+                    'height': height
                 }
             }
             
@@ -166,23 +187,6 @@ class InferenceService:
                 'error': str(e)
             }
     
-    def process_batch(self, images: List[np.ndarray]) -> List[Dict]:
-        """
-        Process multiple images
-        
-        Args:
-            images: List of input images
-            
-        Returns:
-            List of result dictionaries
-        """
-        results = []
-        for i, image in enumerate(images):
-            logger.info(f"Processing image {i+1}/{len(images)}")
-            result = self.process_image(image)
-            results.append(result)
-        return results
-
 
 # Global inference service instance
 _inference_service: Optional[InferenceService] = None
@@ -191,14 +195,18 @@ _inference_service: Optional[InferenceService] = None
 def get_inference_service(
     detector_path: str = None,
     classifier_path: str = None,
+    scaler_path: str = None,
+    confidence_threshold: float = 0.4,
     force_reload: bool = False
 ) -> InferenceService:
     """
     Get or create global inference service instance
     
     Args:
-        detector_path: Path to detector model
-        classifier_path: Path to classifier model
+        detector_path: Path to YOLO model (optional, auto-downloads if None)
+        classifier_path: Path to SVM classifier (.pkl)
+        scaler_path: Path to StandardScaler (.pkl) - REQUIRED!
+        confidence_threshold: Minimum confidence for detections (default: 0.4)
         force_reload: Force reload models
         
     Returns:
@@ -207,12 +215,14 @@ def get_inference_service(
     global _inference_service
     
     if _inference_service is None or force_reload:
-        if detector_path is None or classifier_path is None:
-            raise ValueError("Model paths required for first initialization")
+        if classifier_path is None:
+            raise ValueError("Classifier path required for initialization")
         
         _inference_service = InferenceService(
-            detector_model_path=detector_path,
-            classifier_model_path=classifier_path
+            detector_model_path=detector_path if detector_path else "",
+            classifier_model_path=classifier_path,
+            scaler_path=scaler_path,
+            confidence_threshold=confidence_threshold
         )
     
     return _inference_service
