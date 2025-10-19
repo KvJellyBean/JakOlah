@@ -100,7 +100,9 @@ const SimpleLeafletMap = ({
             TPS: "#3b82f6",
             "Daur Ulang": "#f97316",
           };
-          const color = colorMap[facility.type] || "#6b7280";
+          const color = facility.color || colorMap[facility.type] || "#6b7280";
+          // Text color should be dark for visibility on white circle
+          const textColor = "#1f2937";
 
           const facilityIcon = L.divIcon({
             className: "custom-facility-marker",
@@ -113,7 +115,7 @@ const SimpleLeafletMap = ({
                 <svg width="32" height="40" viewBox="0 0 32 40">
                   <path d="M16 0C7.163 0 0 7.163 0 16c0 12 16 24 16 24s16-12 16-24c0-8.837-7.163-16-16-16z" fill="${color}"/>
                   <circle cx="16" cy="16" r="6" fill="white"/>
-                  <text x="16" y="20" font-family="Arial" font-size="12" font-weight="bold" text-anchor="middle" fill="${color}">${facility.number || "•"}</text>
+                  <text x="16" y="20" font-family="Arial" font-size="12" font-weight="bold" text-anchor="middle" fill="${textColor}">${facility.number || "•"}</text>
                 </svg>
               </div>
             `,

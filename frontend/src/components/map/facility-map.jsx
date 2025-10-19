@@ -24,6 +24,7 @@ const FacilityMap = ({
   onTabChange,
   currentFilter = "Semua",
   detectedWasteCategories = [],
+  hasDetections = false, // New prop: show list only after camera detection
   className = "",
 }) => {
   const [locations, setLocations] = useState([]);
@@ -78,7 +79,6 @@ const FacilityMap = ({
 
         setLocations(transformedData);
       } catch (error) {
-        console.error("Error fetching facilities:", error);
         setFacilitiesError(error.message);
       } finally {
         setIsLoadingFacilities(false);
@@ -99,7 +99,6 @@ const FacilityMap = ({
         setMapCenter([location.latitude, location.longitude]);
         setMapZoom(14);
       } catch (error) {
-        console.error("Error getting user location:", error);
         setLocationError(error.message);
         // Fallback to Jakarta center
         setMapCenter([JAKARTA_CENTER.latitude, JAKARTA_CENTER.longitude]);
@@ -133,15 +132,11 @@ const FacilityMap = ({
   const processedLocations = useMemo(() => {
     let filtered = locations;
 
-    // SMART FILTERING: If waste detected, show facilities that accept it
-    if (
-      detectedWasteCategories &&
-      detectedWasteCategories.length > 0 &&
-      currentFilter === "Semua"
-    ) {
-      // Filter facilities that accept detected waste categories
+    // SMART FILTERING: Auto-filter based on detected waste categories
+    if (detectedWasteCategories && detectedWasteCategories.length > 0) {
+      // Filter facilities that accept ANY of the detected waste types
       filtered = locations.filter(facility => {
-        // Check if facility accepts any of the detected waste types
+        // Check if facility accepts any of the detected waste categories
         return (
           facility.wasteTypes &&
           facility.wasteTypes.some(wasteType =>
@@ -150,13 +145,16 @@ const FacilityMap = ({
         );
       });
 
-      // If no matching facilities, fallback to all
+      // If no matching facilities found, fallback to all locations
       if (filtered.length === 0) {
         filtered = locations;
       }
-    } else if (currentFilter && currentFilter !== "Semua") {
+    }
+
+    // Apply manual category filter on top (if not "Semua")
+    if (currentFilter && currentFilter !== "Semua") {
       // Apply category filter (manual filter)
-      filtered = locations.filter(loc => loc.type === currentFilter);
+      filtered = filtered.filter(loc => loc.type === currentFilter);
     }
 
     // Always limit to 5 closest per category (for all filters)
@@ -189,20 +187,22 @@ const FacilityMap = ({
       filtered = sortFacilitiesByDistance(filtered, userLocation);
     }
 
-    // Map facility type to colors
+    // Map facility type to colors (hex codes for map markers)
     const typeColorMap = {
-      TPA: "red",
-      TPS3R: "blue",
-      "Bank Sampah": "emerald",
-      Komposting: "orange",
-      "Produk Kreatif": "purple",
+      TPA: "#ef4444",
+      TPS3R: "#3b82f6",
+      "Bank Sampah": "#10b981",
+      Komposting: "#f97316",
+      "Produk Kreatif": "#8b5cf6",
+      TPS: "#3b82f6",
+      "Daur Ulang": "#f97316",
     };
 
     // Add number, color, hours, distance for display
     return filtered.map((loc, index) => ({
       ...loc,
       number: index + 1,
-      color: typeColorMap[loc.type] || "emerald",
+      color: typeColorMap[loc.type] || "#10b981",
       hours: loc.hours || "08:00 - 17:00",
       distance: loc.distance || null,
     }));
@@ -327,7 +327,7 @@ const FacilityMap = ({
                   center={mapCenter}
                   zoom={mapZoom}
                   userLocation={userLocation}
-                  facilities={processedLocations}
+                  facilities={hasDetections ? processedLocations : []} // Hide markers if no detection
                   onRouteClick={onLocationRoute}
                   onInfoClick={onLocationInfo}
                 />
@@ -362,94 +362,110 @@ const FacilityMap = ({
           </Card>
         </div>
 
-        {/* Location List */}
-        <Card className="shadow-sm border border-gray-200 !pt-0">
-          <CardHeader className="border-b border-gray-100 border-l-4 border-l-emerald-500 pt-6 rounded-t-lg">
-            <CardTitle className="text-lg md:text-xl text-gray-900">
-              Daftar Lokasi
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4">
-            {/* Filter */}
-            <div className="mb-6">
-              <div className="flex space-x-2 overflow-x-auto flex-wrap gap-y-3">
-                {filters.map(filter => (
-                  <Button
-                    key={filter.value}
-                    variant={
-                      currentFilter === filter.value ? "default" : "secondary"
-                    }
-                    size="sm"
-                    className="whitespace-nowrap"
-                    onClick={() => handleFilterClick(filter.value)}
-                  >
-                    {filter.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            {/* Location Items */}
-            <div className="space-y-4">
-              {processedLocations.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <MapPin className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">Tidak ada lokasi ditemukan</p>
-                </div>
-              ) : (
-                paginatedLocations.map(location => (
-                  <LocationCard
-                    key={location.id}
-                    name={location.name}
-                    type={location.type}
-                    distance={location.distance}
-                    address={location.address}
-                    hours={location.hours}
-                    wasteTypes={location.wasteTypes}
-                    color={location.color}
-                    number={location.number}
-                    onRouteClick={() => {
-                      // Trigger routing on map
-                      if (
-                        typeof window !== "undefined" &&
-                        window.routeToFacility
-                      ) {
-                        window.routeToFacility(location.id);
+        {/* Location List - Show only after camera detection */}
+        {hasDetections ? (
+          <Card className="shadow-sm border border-gray-200 !pt-0">
+            <CardHeader className="border-b border-gray-100 border-l-4 border-l-emerald-500 pt-6 rounded-t-lg">
+              <CardTitle className="text-lg md:text-xl text-gray-900">
+                Daftar Lokasi
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              {/* Filter */}
+              <div className="mb-6">
+                <div className="flex space-x-2 overflow-x-auto flex-wrap gap-y-3">
+                  {filters.map(filter => (
+                    <Button
+                      key={filter.value}
+                      variant={
+                        currentFilter === filter.value ? "default" : "secondary"
                       }
-                      // Also call parent handler if provided
-                      onLocationRoute?.(location);
-                    }}
-                  />
-                ))
-              )}
-            </div>
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="mt-6 flex items-center justify-between">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handlePrevPage}
-                  disabled={currentPage === 1}
-                >
-                  ← Sebelumnya
-                </Button>
-                <div className="text-sm text-gray-600">
-                  Halaman {currentPage} dari {totalPages}
+                      size="sm"
+                      className="whitespace-nowrap"
+                      onClick={() => handleFilterClick(filter.value)}
+                    >
+                      {filter.label}
+                    </Button>
+                  ))}
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleNextPage}
-                  disabled={currentPage === totalPages}
-                >
-                  Selanjutnya →
-                </Button>
               </div>
-            )}
-          </CardContent>
-        </Card>
+
+              {/* Location Items */}
+              <div className="space-y-4">
+                {processedLocations.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <MapPin className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">Tidak ada lokasi ditemukan</p>
+                  </div>
+                ) : (
+                  paginatedLocations.map(location => (
+                    <LocationCard
+                      key={location.id}
+                      name={location.name}
+                      type={location.type}
+                      distance={location.distance}
+                      address={location.address}
+                      hours={location.hours}
+                      wasteTypes={location.wasteTypes}
+                      color={location.color}
+                      number={location.number}
+                      onRouteClick={() => {
+                        // Trigger routing on map
+                        if (
+                          typeof window !== "undefined" &&
+                          window.routeToFacility
+                        ) {
+                          window.routeToFacility(location.id);
+                        }
+                        // Also call parent handler if provided
+                        onLocationRoute?.(location);
+                      }}
+                    />
+                  ))
+                )}
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="mt-6 flex items-center justify-between">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePrevPage}
+                    disabled={currentPage === 1}
+                  >
+                    ← Sebelumnya
+                  </Button>
+                  <div className="text-sm text-gray-600">
+                    Halaman {currentPage} dari {totalPages}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleNextPage}
+                    disabled={currentPage === totalPages}
+                  >
+                    Selanjutnya →
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="shadow-sm border border-gray-200">
+            <CardContent className="p-8 text-center">
+              <div className="text-gray-400 mb-2">
+                <MapPin className="w-12 h-12 mx-auto opacity-30" />
+              </div>
+              <p className="text-gray-600 font-medium mb-1">
+                Belum Ada Deteksi
+              </p>
+              <p className="text-sm text-gray-500">
+                Gunakan kamera untuk mendeteksi sampah terlebih dahulu
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Back to Camera on mobile */}
