@@ -58,6 +58,57 @@
   }
 }
 
+/* Custom Scrollbar Styling */
+/* Webkit browsers (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #10b981 0%, #059669 100%);
+  border-radius: 10px;
+  border: 2px solid #f1f5f9;
+  transition: background 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #059669 0%, #047857 100%);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: linear-gradient(180deg, #047857 0%, #065f46 100%);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #10b981 #f1f5f9;
+}
+
+/* Dark mode scrollbar */
+.dark ::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #10b981 0%, #059669 100%);
+  border-color: #1e293b;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #059669 0%, #047857 100%);
+}
+
+.dark * {
+  scrollbar-color: #10b981 #1e293b;
+}
+
 /* Leaflet Map Styles */
 .leaflet-container {
   font-family: inherit;
