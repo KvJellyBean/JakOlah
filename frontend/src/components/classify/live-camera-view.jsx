@@ -55,6 +55,7 @@ const LiveCameraView = forwardRef(
     // Real-time classification states
     const [detections, setDetections] = useState([]);
     const [videoSize, setVideoSize] = useState({ width: 0, height: 0 });
+    const [displaySize, setDisplaySize] = useState({ width: 0, height: 0 }); // Actual displayed size
     const [isProcessing, setIsProcessing] = useState(false);
     const [processingError, setProcessingError] = useState(null);
     const [retryCount, setRetryCount] = useState(0);
@@ -121,8 +122,26 @@ const LiveCameraView = forwardRef(
             width: videoRef.current.videoWidth,
             height: videoRef.current.videoHeight,
           });
+
+          // Update displayed size
+          updateDisplaySize();
         };
       }
+    }, []);
+
+    /**
+     * Update displayed video size (accounting for object-fit)
+     */
+    const updateDisplaySize = useCallback(() => {
+      if (!videoRef.current) return;
+
+      const video = videoRef.current;
+      const rect = video.getBoundingClientRect();
+
+      setDisplaySize({
+        width: rect.width,
+        height: rect.height,
+      });
     }, []);
 
     const enumerateCameras = useCallback(async () => {
@@ -212,15 +231,26 @@ const LiveCameraView = forwardRef(
         if (result.success && result.data && result.data.detections) {
           const { detections, metadata } = result.data;
 
+          // CRITICAL FIX: Use uploaded image size for bbox coordinates
+          // Backend sends bbox in coordinates of the uploaded/optimized image
+          const uploadedImageSize = metadata?.image_size || {
+            width: canvas.width,
+            height: canvas.height,
+          };
+
           // Transform detections to component format
           const transformedDetections = detections.map(detection => ({
             id: detection.id,
             category: detection.category,
             confidence: detection.confidence,
-            bbox: detection.bbox, // {x, y, width, height}
+            bbox: detection.bbox, // {x, y, width, height} - in uploaded image space
           }));
 
           setDetections(transformedDetections);
+
+          // Update videoSize to match uploaded image dimensions
+          // This ensures bbox coordinates are correctly mapped
+          setVideoSize(uploadedImageSize);
 
           // Callback with full result including metadata
           onClassificationResult?.({
@@ -382,6 +412,18 @@ const LiveCameraView = forwardRef(
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // Only run on mount/unmount
 
+    // Update display size on resize or object-fit change
+    useEffect(() => {
+      updateDisplaySize();
+
+      const handleResize = () => {
+        updateDisplaySize();
+      };
+
+      window.addEventListener("resize", handleResize);
+      return () => window.removeEventListener("resize", handleResize);
+    }, [updateDisplaySize, objectFit]);
+
     // Expose stopStream to parent component via ref
     useImperativeHandle(
       ref,
@@ -440,7 +482,12 @@ const LiveCameraView = forwardRef(
 
         {/* Bounding Box Overlay */}
         {detections.length > 0 && (
-          <BoundingBoxOverlay detections={detections} videoSize={videoSize} />
+          <BoundingBoxOverlay
+            detections={detections}
+            videoSize={videoSize}
+            displaySize={displaySize}
+            objectFit={objectFit}
+          />
         )}
 
         {/* T049: Processing Loading Indicator */}
