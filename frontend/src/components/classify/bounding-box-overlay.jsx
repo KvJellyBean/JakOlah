@@ -11,7 +11,11 @@ const BoundingBoxOverlay = ({ detections = [], videoSize, className = "" }) => {
     <svg
       className={`absolute inset-0 pointer-events-none ${className}`}
       viewBox={`0 0 ${videoSize.width} ${videoSize.height}`}
-      preserveAspectRatio="xMidYMid slice"
+      preserveAspectRatio="none"
+      style={{
+        width: "100%",
+        height: "100%",
+      }}
     >
       {detections.map((detection, index) => {
         // Extract bbox coordinates (handle both flat and nested bbox)
