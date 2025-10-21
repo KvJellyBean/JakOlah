@@ -1,7 +1,6 @@
 /**
- * BoundingBoxOverlay Component
- * Displays bounding boxes for detected waste objects in real-time camera feed
- * Handles coordinate transformation for different aspect ratios and object-fit modes
+ * Komponen BoundingBoxOverlay
+ * Menampilkan kotak pembatas untuk objek sampah yang terdeteksi dalam feed kamera real-time
  */
 const BoundingBoxOverlay = ({
   detections = [],
@@ -14,7 +13,7 @@ const BoundingBoxOverlay = ({
     return null;
   }
 
-  // Validate sizes
+  // Validasi ukuran dari video dan display
   if (
     !videoSize?.width ||
     !videoSize?.height ||
@@ -25,8 +24,8 @@ const BoundingBoxOverlay = ({
   }
 
   /**
-   * Calculate transformation for bounding box coordinates
-   * Handles both 'cover' and 'contain' object-fit modes
+   * Hitung transformasi untuk koordinat bounding box
+   * Menangani mode object-fit 'cover' dan 'contain'
    */
   const calculateTransform = () => {
     const videoAspect = videoSize.width / videoSize.height;
@@ -36,27 +35,27 @@ const BoundingBoxOverlay = ({
     let offset = { x: 0, y: 0 };
 
     if (objectFit === "cover") {
-      // Video is scaled to cover the container (may be cropped)
+      // Video di-scale untuk mengisi container (mungkin terpotong)
       if (videoAspect > displayAspect) {
-        // Video is wider - height matches, width is cropped
+        // Video lebih lebar - tinggi sesuai, lebar terpotong
         scale.y = displaySize.height / videoSize.height;
         scale.x = scale.y;
         offset.x = (displaySize.width - videoSize.width * scale.x) / 2;
       } else {
-        // Video is taller - width matches, height is cropped
+        // Video lebih tinggi - lebar sesuai, tinggi terpotong
         scale.x = displaySize.width / videoSize.width;
         scale.y = scale.x;
         offset.y = (displaySize.height - videoSize.height * scale.y) / 2;
       }
     } else {
-      // contain - Video is scaled to fit within container (may have letterboxing)
+      // contain - Video di-scale untuk muat dalam container (mungkin ada letterbox)
       if (videoAspect > displayAspect) {
-        // Video is wider - width matches, height has letterbox
+        // Video lebih lebar - lebar sesuai, tinggi ada letterbox
         scale.x = displaySize.width / videoSize.width;
         scale.y = scale.x;
         offset.y = (displaySize.height - videoSize.height * scale.y) / 2;
       } else {
-        // Video is taller - height matches, width has letterbox
+        // Video lebih tinggi - tinggi sesuai, lebar ada letterbox
         scale.y = displaySize.height / videoSize.height;
         scale.x = scale.y;
         offset.x = (displaySize.width - videoSize.width * scale.x) / 2;
@@ -69,7 +68,7 @@ const BoundingBoxOverlay = ({
   const { scale, offset } = calculateTransform();
 
   /**
-   * Transform bbox coordinates from video space to display space
+   * Transformasi koordinat bounding box dari ruang video ke ruang tampilan
    */
   const transformBbox = bbox => {
     return {
@@ -89,13 +88,13 @@ const BoundingBoxOverlay = ({
       }}
     >
       {detections.map((detection, index) => {
-        // Extract bbox coordinates (handle both flat and nested bbox)
+        // Ekstrak koordinat bbox (handle flat dan nested bbox)
         const bbox = detection.bbox || detection;
         const { x, y, width, height } = bbox;
         const category = detection.category || detection.label;
         const confidence = detection.confidence;
 
-        // Validate coordinates - skip if invalid
+        // Validasi koordinat - skip jika tidak valid
         if (
           !Number.isFinite(x) ||
           !Number.isFinite(y) ||
@@ -103,15 +102,15 @@ const BoundingBoxOverlay = ({
           !Number.isFinite(height)
         ) {
           console.warn(
-            `Invalid bbox coordinates for detection ${index}:`,
+            `Koordinat bbox tidak valid untuk deteksi ${index}:`,
             detection
           );
           return null;
         }
 
-        // Skip if width or height is 0 or negative
+        // Skip jika lebar atau tinggi 0 atau negatif
         if (width <= 0 || height <= 0) {
-          console.warn(`Invalid bbox size for detection ${index}:`, {
+          console.warn(`Ukuran bbox tidak valid untuk deteksi ${index}:`, {
             x,
             y,
             width,
@@ -120,19 +119,19 @@ const BoundingBoxOverlay = ({
           return null;
         }
 
-        // Transform coordinates to display space
+        // Transformasi koordinat ke ruang tampilan
         const transformed = transformBbox({ x, y, width, height });
 
-        // Color based on waste category
+        // Warna berdasarkan kategori sampah
         const colorMap = {
-          organik: "#22c55e", // green
-          anorganik: "#3b82f6", // blue
-          lainnya: "#eab308", // yellow
+          organik: "#22c55e", // hijau
+          anorganik: "#3b82f6", // biru
+          lainnya: "#eab308", // kuning
         };
 
-        const color = colorMap[category?.toLowerCase()] || "#6b7280"; // default gray
+        const color = colorMap[category?.toLowerCase()] || "#6b7280"; // default abu-abu
 
-        // Calculate responsive sizes
+        // Hitung ukuran responsif
         const cornerLength = Math.min(
           20,
           transformed.width * 0.15,
@@ -142,7 +141,7 @@ const BoundingBoxOverlay = ({
 
         return (
           <g key={`detection-${index}`}>
-            {/* Bounding box rectangle */}
+            {/* Persegi panjang bounding box */}
             <rect
               x={transformed.x}
               y={transformed.y}
@@ -154,7 +153,7 @@ const BoundingBoxOverlay = ({
               rx="4"
             />
 
-            {/* Corner markers - Top Left */}
+            {/* Penanda sudut - Kiri Atas */}
             <line
               x1={transformed.x}
               y1={transformed.y}
@@ -172,7 +171,7 @@ const BoundingBoxOverlay = ({
               strokeWidth={strokeWidth + 1}
             />
 
-            {/* Corner markers - Top Right */}
+            {/* Penanda sudut - Kanan Atas */}
             <line
               x1={transformed.x + transformed.width}
               y1={transformed.y}
@@ -190,7 +189,7 @@ const BoundingBoxOverlay = ({
               strokeWidth={strokeWidth + 1}
             />
 
-            {/* Corner markers - Bottom Left */}
+            {/* Penanda sudut - Kiri Bawah */}
             <line
               x1={transformed.x}
               y1={transformed.y + transformed.height}
@@ -208,7 +207,7 @@ const BoundingBoxOverlay = ({
               strokeWidth={strokeWidth + 1}
             />
 
-            {/* Corner markers - Bottom Right */}
+            {/* Penanda sudut - Kanan Bawah */}
             <line
               x1={transformed.x + transformed.width}
               y1={transformed.y + transformed.height}
@@ -226,7 +225,7 @@ const BoundingBoxOverlay = ({
               strokeWidth={strokeWidth + 1}
             />
 
-            {/* Label background */}
+            {/* Latar belakang label */}
             <rect
               x={transformed.x}
               y={transformed.y - 30}
@@ -237,7 +236,7 @@ const BoundingBoxOverlay = ({
               opacity="0.9"
             />
 
-            {/* Label text */}
+            {/* Teks label */}
             <text
               x={transformed.x + 8}
               y={transformed.y - 10}

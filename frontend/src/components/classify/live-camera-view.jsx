@@ -20,9 +20,9 @@ import { BoundingBoxOverlay } from "./bounding-box-overlay";
 import { classifyFrame, optimizeImage } from "@/lib/api";
 
 /**
- * LiveCameraView Component
- * Handles live camera streaming with device selection, flip, and fullscreen
- * Includes real-time frame capture and ML classification
+ * Komponen LiveCameraView
+ * Menangani streaming kamera live dengan pemilihan perangkat, flip, dan fullscreen
+ * Termasuk pengambilan frame real-time dan klasifikasi ML
  */
 const LiveCameraView = forwardRef(
   (
@@ -42,8 +42,8 @@ const LiveCameraView = forwardRef(
     const processingRef = useRef(false);
     const intervalRef = useRef(null);
     const retryTimeoutRef = useRef(null);
-    const isMountedRef = useRef(true); // Track component mount status
-    const processFrameRef = useRef(null); // Stable reference to processFrame
+    const isMountedRef = useRef(true); // untuk melacak status mount komponen
+    const processFrameRef = useRef(null); // untuk menyimpan referensi ke processFrame
 
     const [isStreaming, setIsStreaming] = useState(false);
     const [facingMode, setFacingMode] = useState("environment");
@@ -55,12 +55,12 @@ const LiveCameraView = forwardRef(
     // Real-time classification states
     const [detections, setDetections] = useState([]);
     const [videoSize, setVideoSize] = useState({ width: 0, height: 0 });
-    const [displaySize, setDisplaySize] = useState({ width: 0, height: 0 }); // Actual displayed size
+    const [displaySize, setDisplaySize] = useState({ width: 0, height: 0 });
     const [isProcessing, setIsProcessing] = useState(false);
     const [processingError, setProcessingError] = useState(null);
     const [retryCount, setRetryCount] = useState(0);
-    const [serviceUnavailable, setServiceUnavailable] = useState(false); // Track service availability
-    const MAX_RETRIES = 1; // Only 1 retry - fail fast for better UX
+    const [serviceUnavailable, setServiceUnavailable] = useState(false);
+    const MAX_RETRIES = 1; // Maksimal percobaan ulang untuk akses kamera dan klasifikasi ketika gagal
 
     const stopStream = useCallback((keepError = false) => {
       // FORCE stop all media tracks immediately
@@ -69,26 +69,24 @@ const LiveCameraView = forwardRef(
         streamRef.current = null;
       }
 
-      // Aggressively clear and reset video element
+      // Hentikan semua elemen video
       if (videoRef.current) {
         videoRef.current.pause();
         videoRef.current.srcObject = null;
-        videoRef.current.load(); // Reset video element to release camera
+        videoRef.current.load(); // Reset video element
         videoRef.current.currentTime = 0; // Reset playback position
       }
 
       setIsStreaming(false);
-
-      // Clear detections when camera stops
       setDetections([]);
 
-      // Clear classification interval
+      // Menghentikan interval klasifikasi real-time
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
 
-      // Clear retry timeout
+      // Hentikan semua timeout percobaan ulang
       if (retryTimeoutRef.current) {
         clearTimeout(retryTimeoutRef.current);
         retryTimeoutRef.current = null;
@@ -105,10 +103,11 @@ const LiveCameraView = forwardRef(
         setServiceUnavailable(false); // Reset service status
       }
 
-      // Mark component as unmounted to stop any pending retries
+      // Tandai komponen sebagai tidak ter-mount untuk menghentikan percobaan ulang yang tertunda
       isMountedRef.current = false;
     }, []);
 
+    // Terapkan stream ke elemen video
     const applyStreamToVideo = useCallback(stream => {
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
@@ -116,7 +115,7 @@ const LiveCameraView = forwardRef(
         videoRef.current.muted = true;
         videoRef.current.autoplay = true;
 
-        // Get video dimensions when metadata loads
+        // Set onloadedmetadata untuk mendapatkan ukuran video asli
         videoRef.current.onloadedmetadata = () => {
           setVideoSize({
             width: videoRef.current.videoWidth,
@@ -129,9 +128,7 @@ const LiveCameraView = forwardRef(
       }
     }, []);
 
-    /**
-     * Update displayed video size (accounting for object-fit)
-     */
+    // Update displayed video size (accounting for object-fit)
     const updateDisplaySize = useCallback(() => {
       if (!videoRef.current) return;
 
@@ -152,14 +149,10 @@ const LiveCameraView = forwardRef(
         if (!selectedDeviceId && cams.length > 0) {
           setSelectedDeviceId(cams[0].deviceId);
         }
-      } catch (e) {
-        // Silently fail - camera enumeration not critical
-      }
+      } catch (e) {}
     }, [selectedDeviceId]);
 
-    /**
-     * Capture frame from video stream and convert to base64
-     */
+    // Capture frame dari video sebagai base64
     const captureFrame = useCallback(() => {
       if (!videoRef.current || !canvasRef.current) {
         return null;
@@ -169,26 +162,20 @@ const LiveCameraView = forwardRef(
       const canvas = canvasRef.current;
       const context = canvas.getContext("2d");
 
-      // Set canvas dimensions to match video
+      // Set ukuran kanvas agar sesuai dengan video
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
 
-      // Draw current video frame to canvas
+      // Gambar frame video saat ini ke kanvas
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
       // Convert to base64 JPEG
       return canvas.toDataURL("image/jpeg", 0.8);
     }, []);
 
-    /**
-     * Process frame with ML API (T046 + T048 + T050 + T051)
-     * - T046: Connect to ML service
-     * - T048: Image optimization before upload
-     * - T050: Error handling with user feedback
-     * - T051: Retry logic for failed requests
-     */
+    // Proses frame untuk klasifikasi
     const processFrame = useCallback(async () => {
-      // Check if component is still mounted
+      // Periksa apakah komponen masih terpasang
       if (!isMountedRef.current || processingRef.current || !isStreaming) {
         return;
       }
@@ -198,7 +185,7 @@ const LiveCameraView = forwardRef(
         setIsProcessing(true);
         setProcessingError(null);
 
-        // Capture frame from video
+        // Ambil frame dari video
         if (!videoRef.current || !canvasRef.current) {
           throw new Error("Camera not ready");
         }
@@ -211,17 +198,17 @@ const LiveCameraView = forwardRef(
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
 
-        // Draw video frame
+        // Gambar frame video saat ini ke kanvas
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        // T048: Optimize image before upload (max 1280x720, quality 0.8)
+        // Optimalkan gambar (max 1280x720, quality 0.8)
         const optimizedBlob = await optimizeImage(canvas, {
           quality: 0.8,
           maxWidth: 1280,
           maxHeight: 720,
         });
 
-        // T046: Call ML service with optimized image
+        // call ML service dengan gambar yang sudah dioptimalkan
         const result = await classifyFrame(optimizedBlob);
 
         // Success - reset retry count
@@ -231,7 +218,6 @@ const LiveCameraView = forwardRef(
         if (result.success && result.data && result.data.detections) {
           const { detections, metadata } = result.data;
 
-          // CRITICAL FIX: Use uploaded image size for bbox coordinates
           // Backend sends bbox in coordinates of the uploaded/optimized image
           const uploadedImageSize = metadata?.image_size || {
             width: canvas.width,
@@ -264,18 +250,16 @@ const LiveCameraView = forwardRef(
           setDetections([]);
         }
       } catch (error) {
-        // T050: Error handling with user feedback
         setProcessingError(error.message);
 
-        // T051: Retry logic (max 3 attempts)
+        // Retry logic
         if (retryCount < MAX_RETRIES) {
           const nextRetry = retryCount + 1;
           setRetryCount(nextRetry);
           const backoffMs = Math.min(1000 * Math.pow(2, retryCount), 5000);
 
-          // Retry after delay (exponential backoff) - store timeout ID
           retryTimeoutRef.current = setTimeout(() => {
-            // Double-check component is still mounted before retrying
+            // Double-check component ketika ter-mount sebelum mencoba lagi
             if (!isMountedRef.current) {
               return;
             }
@@ -283,17 +267,14 @@ const LiveCameraView = forwardRef(
             processFrame();
           }, backoffMs);
         } else {
-          // Max retries reached - service unavailable
           setServiceUnavailable(true);
 
-          // CRITICAL: Clear interval FIRST to stop retry loop
           if (intervalRef.current) {
             clearInterval(intervalRef.current);
             intervalRef.current = null;
           }
 
-          // Stop camera stream but KEEP error for display
-          stopStream(true); // Pass true to preserve error state
+          stopStream(true);
           setIsProcessing(false);
         }
       } finally {
@@ -317,7 +298,7 @@ const LiveCameraView = forwardRef(
         // Start interval for frame processing
         intervalRef.current = setInterval(() => {
           if (processFrameRef.current) {
-            processFrameRef.current(); // Use ref to avoid dependency
+            processFrameRef.current();
           }
         }, classificationInterval);
 
@@ -334,12 +315,7 @@ const LiveCameraView = forwardRef(
           intervalRef.current = null;
         }
       }
-    }, [
-      enableRealTimeClassification,
-      isStreaming,
-      classificationInterval,
-      // Removed processFrame dependency to prevent infinite loop
-    ]);
+    }, [enableRealTimeClassification, isStreaming, classificationInterval]);
 
     const startStream = useCallback(
       async (opts = {}) => {
@@ -347,7 +323,6 @@ const LiveCameraView = forwardRef(
           setError("");
           stopStream();
 
-          // Mark component as mounted when starting stream
           isMountedRef.current = true;
 
           const useFacing = opts.facing ?? facingMode;
@@ -394,7 +369,7 @@ const LiveCameraView = forwardRef(
       ]
     );
 
-    // Auto-start camera on mount
+    // Auto-start kamera on mount
     useEffect(() => {
       if (
         typeof navigator !== "undefined" &&
@@ -413,6 +388,7 @@ const LiveCameraView = forwardRef(
     }, []); // Only run on mount/unmount
 
     // Update display size on resize or object-fit change
+    // Update display size ketika jendela diubah ukurannya atau object-fit berubah
     useEffect(() => {
       updateDisplaySize();
 
@@ -424,7 +400,7 @@ const LiveCameraView = forwardRef(
       return () => window.removeEventListener("resize", handleResize);
     }, [updateDisplaySize, objectFit]);
 
-    // Expose stopStream to parent component via ref
+    // Untuk menghentikan streaming dari komponen induk
     useImperativeHandle(
       ref,
       () => ({
@@ -490,7 +466,7 @@ const LiveCameraView = forwardRef(
           />
         )}
 
-        {/* T049: Processing Loading Indicator */}
+        {/* Processing Loading Indicator */}
         {isProcessing && (
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-30">
             <div className="bg-black/60 backdrop-blur-sm rounded-lg px-6 py-4 flex items-center space-x-3">
@@ -502,7 +478,7 @@ const LiveCameraView = forwardRef(
           </div>
         )}
 
-        {/* T050: Service Unavailable - User-Friendly Message */}
+        {/* Service Unavailable - User-Friendly Message */}
         {serviceUnavailable && !isStreaming && (
           <div className="absolute inset-0 z-20 flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-black">
             <div className="max-w-sm mx-4 text-center">

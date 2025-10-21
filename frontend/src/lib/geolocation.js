@@ -1,18 +1,11 @@
 /**
- * Geolocation Utilities
- * Functions for handling user location and distance calculations
+ * Utilitas Geolokasi
+ * Fungsi untuk menangani lokasi pengguna dan kalkulasi jarak
  */
 
-/**
- * Calculate distance between two coordinates using Haversine formula
- * @param {number} lat1 - Latitude of first point
- * @param {number} lon1 - Longitude of first point
- * @param {number} lat2 - Latitude of second point
- * @param {number} lon2 - Longitude of second point
- * @returns {number} Distance in kilometers
- */
+// Untuk menghitung jarak antara dua koordinat
 export function calculateDistance(lat1, lon1, lat2, lon2) {
-  const R = 6371; // Earth's radius in km
+  const R = 6371; // Radius bumi dalam km
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
 
@@ -29,18 +22,11 @@ export function calculateDistance(lat1, lon1, lat2, lon2) {
   return distance;
 }
 
-/**
- * Convert degrees to radians
- */
 function toRad(degrees) {
   return degrees * (Math.PI / 180);
 }
 
-/**
- * Format distance for display
- * @param {number} distanceKm - Distance in kilometers
- * @returns {string} Formatted distance string
- */
+// Format jarak untuk ditampilkan
 export function formatDistance(distanceKm) {
   if (distanceKm < 1) {
     return `${Math.round(distanceKm * 1000)} m`;
@@ -48,10 +34,7 @@ export function formatDistance(distanceKm) {
   return `${distanceKm.toFixed(1)} km`;
 }
 
-/**
- * Get user's current position using Geolocation API
- * @returns {Promise<{latitude: number, longitude: number}>}
- */
+// Dapatkan posisi pengguna saat ini menggunakan Geolocation API
 export function getUserLocation() {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
@@ -85,24 +68,19 @@ export function getUserLocation() {
       {
         enableHighAccuracy: true,
         timeout: 10000,
-        maximumAge: 60000, // Cache for 1 minute
+        maximumAge: 60000, // Cache selama 1 menit
       }
     );
   });
 }
 
-/**
- * Sort facilities by distance from user location
- * @param {Array} facilities - Array of facility objects
- * @param {Object} userLocation - User's location {latitude, longitude}
- * @returns {Array} Sorted facilities with distance property
- */
+// Urutkan fasilitas berdasarkan jarak dari lokasi pengguna
 export function sortFacilitiesByDistance(facilities, userLocation) {
   if (!userLocation) return facilities;
 
   return facilities
     .map(facility => {
-      // Handle both flat and nested position structures
+      // Handle struktur posisi flat dan nested
       const facilityLat = facility.position?.lat ?? facility.latitude;
       const facilityLng = facility.position?.lng ?? facility.longitude;
 
@@ -129,9 +107,7 @@ export function sortFacilitiesByDistance(facilities, userLocation) {
     .sort((a, b) => a.distanceKm - b.distanceKm);
 }
 
-/**
- * Default location for Jakarta (used as fallback)
- */
+// Lokasi default untuk Jakarta (digunakan sebagai fallback)
 export const JAKARTA_CENTER = {
   latitude: -6.2088,
   longitude: 106.8456,

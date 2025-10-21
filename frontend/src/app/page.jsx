@@ -19,8 +19,6 @@ export default function LandingPage() {
           { href: "/klasifikasi", label: "Klasifikasi" },
           { href: "/informasi", label: "Informasi" },
         ]}
-        showLoginButton
-        onLoginClick={() => router.push("/masuk")}
       />
 
       <HeroSection onGetStartedClick={() => router.push("/klasifikasi")} />
@@ -29,7 +27,7 @@ export default function LandingPage() {
 
       <WasteGuideSection />
 
-      <CTASection onGetStartedClick={() => router.push("/daftar")} />
+      <CTASection />
 
       <Footer />
     </div>

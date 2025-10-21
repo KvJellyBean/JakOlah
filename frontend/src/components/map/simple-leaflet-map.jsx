@@ -3,8 +3,8 @@
 import { useEffect, useRef } from "react";
 
 /**
- * SimpleLeafletMap Component
- * Minimal Leaflet implementation untuk menghindari SSR/hydration issues
+ * Komponen SimpleLeafletMap
+ * Implementasi Leaflet
  */
 const SimpleLeafletMap = ({
   center,
@@ -19,26 +19,25 @@ const SimpleLeafletMap = ({
   const routingControlRef = useRef(null);
 
   useEffect(() => {
-    // Only run on client-side
     if (typeof window === "undefined" || !mapRef.current) return;
 
-    // Import Leaflet dynamically
+    // Import Leaflet
     const initMap = async () => {
       try {
         const L = (await import("leaflet")).default;
 
-        // Initialize map if not already initialized
+        // Inisialisasi peta jika belum ada
         if (!mapInstanceRef.current) {
           mapInstanceRef.current = L.map(mapRef.current).setView(center, zoom);
 
-          // Add OpenStreetMap tiles
+          // Tambah layer peta OpenStreetMap
           L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
             attribution:
               '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
             maxZoom: 19,
           }).addTo(mapInstanceRef.current);
         } else {
-          // Update view if map exists
+          // Update view jika peta sudah ada
           mapInstanceRef.current.setView(center, zoom);
         }
 
@@ -51,7 +50,7 @@ const SimpleLeafletMap = ({
           }
         });
 
-        // Add user location marker
+        // Penanda lokasi user
         if (userLocation) {
           const userIcon = L.divIcon({
             className: "custom-user-marker",
@@ -84,7 +83,6 @@ const SimpleLeafletMap = ({
             .addTo(map)
             .bindPopup("Lokasi Anda");
 
-          // Accuracy circle
           L.circle([userLocation.latitude, userLocation.longitude], {
             color: "#ef4444",
             fillColor: "#ef4444",
@@ -93,7 +91,7 @@ const SimpleLeafletMap = ({
           }).addTo(map);
         }
 
-        // Add facility markers
+        // Penanda fasilitas
         facilities.forEach(facility => {
           const colorMap = {
             "Bank Sampah": "#22c55e",
@@ -101,7 +99,6 @@ const SimpleLeafletMap = ({
             "Daur Ulang": "#f97316",
           };
           const color = facility.color || colorMap[facility.type] || "#6b7280";
-          // Text color should be dark for visibility on white circle
           const textColor = "#1f2937";
 
           const facilityIcon = L.divIcon({
@@ -123,11 +120,10 @@ const SimpleLeafletMap = ({
             iconAnchor: [16, 40],
           });
 
-          // Get coordinates from position object or flat properties
+          // Ambil koordinat dari objek posisi atau properti langsung
           const lat = facility.position?.lat ?? facility.latitude;
           const lng = facility.position?.lng ?? facility.longitude;
 
-          // Skip if coordinates are invalid
           if (lat === undefined || lng === undefined) {
             console.warn(
               `Skipping facility ${facility.name} - invalid coordinates`,
@@ -140,7 +136,7 @@ const SimpleLeafletMap = ({
             icon: facilityIcon,
           }).addTo(map);
 
-          // Popup content (no emojis/complex SVG to avoid syntax errors)
+          // Popup content
           const popupContent = `
             <div style="padding: 8px; min-width: 200px;">
               <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
@@ -168,7 +164,7 @@ const SimpleLeafletMap = ({
 
           marker.bindPopup(popupContent, { maxWidth: 280 });
 
-          // Add click handler after popup opens
+          // Tambahkan handler klik setelah popup terbuka
           marker.on("popupopen", () => {
             const btn = document.getElementById(`route-btn-${facility.id}`);
             if (btn) {
@@ -181,7 +177,7 @@ const SimpleLeafletMap = ({
           });
         });
 
-        // Setup global functions for popup buttons
+        // Untuk setup fungsi routing dari popup
         if (typeof window !== "undefined") {
           window.routeToFacility = async id => {
             const facility = facilities.find(f => f.id === id);
@@ -200,9 +196,8 @@ const SimpleLeafletMap = ({
               const facilityLat = facility.position?.lat ?? facility.latitude;
               const facilityLng = facility.position?.lng ?? facility.longitude;
 
-              // Try to load Leaflet Routing Machine with walking profile
+              // Load Leaflet Routing Machine (mode berjalan kaki)
               try {
-                // Use direct OSRM API call for walking route
                 const response = await fetch(
                   `https://router.project-osrm.org/route/v1/foot/${userLocation.longitude},${userLocation.latitude};${facilityLng},${facilityLat}?overview=full&geometries=geojson`
                 );
@@ -223,10 +218,8 @@ const SimpleLeafletMap = ({
                       className: "route-line-glow",
                     }).addTo(map);
 
-                    // Fit bounds to show route
+                    // Sesuaikan tampilan peta untuk menampilkan rute
                     map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
-
-                    // Store for cleanup
                     routingControlRef.current = polyline;
 
                     if (onRouteClick) {
@@ -239,7 +232,7 @@ const SimpleLeafletMap = ({
                   throw new Error("Routing API failed");
                 }
               } catch (routingError) {
-                // Fallback: Draw simple line if routing machine not available
+                // Fallback: Gambar garis sederhana jika routing machine tidak tersedia
                 console.warn(
                   "Routing machine not available, drawing simple line:",
                   routingError
@@ -258,10 +251,7 @@ const SimpleLeafletMap = ({
                   }
                 ).addTo(map);
 
-                // Fit bounds to show both points
                 map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
-
-                // Store polyline for cleanup
                 routingControlRef.current = polyline;
 
                 if (onRouteClick) {
@@ -270,7 +260,6 @@ const SimpleLeafletMap = ({
               }
             } catch (error) {
               console.error("Failed to create route:", error);
-              // Silent fail - no alert popup
             }
           };
         }

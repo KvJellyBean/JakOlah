@@ -1,6 +1,6 @@
 """
 Feature Extractor
-MobileNetV3 CNN for extracting features from cropped waste images
+CNN MobileNetV3 untuk mengekstrak fitur dari gambar sampah yang di-crop
 """
 import numpy as np
 import tensorflow as tf
@@ -15,17 +15,16 @@ logger = logging.getLogger(__name__)
 
 class FeatureExtractor:
     """
-    MobileNetV3-Large feature extractor for waste classification
-    Extracts 960-dimensional features from images
-    CRITICAL: Uses StandardScaler for feature normalization (same as training)
+    Feature extractor MobileNetV3-Large untuk klasifikasi sampah
+    Mengekstrak fitur 960-dimensi dari gambar
     """
     
     def __init__(self, scaler_path: Optional[str] = None):
         """
-        Initialize MobileNetV3-Large feature extractor
+        Inisialisasi feature extractor MobileNetV3-Large
         
         Args:
-            scaler_path: Path to mobilenet_scaler.pkl (REQUIRED for production!)
+            scaler_path: Path ke mobilenet_scaler.pkl
         """
         self.model = None
         self.scaler = None
@@ -35,12 +34,12 @@ class FeatureExtractor:
         self._load_scaler()
     
     def _load_model(self):
-        """Load MobileNetV3-Large without top layer with optimizations"""
+        """Muat MobileNetV3-Large tanpa top layer dengan optimasi"""
         try:
             logger.info("Loading MobileNetV3-Large feature extractor")
             
-            # Load MobileNetV3-Large pretrained on ImageNet
-            # pooling='avg' gives us global average pooling (960-dim features)
+            # Muat MobileNetV3-Large pretrained pada ImageNet
+            # pooling='avg' memberikan global average pooling (fitur 960-dim)
             self.model = MobileNetV3Large(
                 include_top=False,
                 weights='imagenet',
@@ -48,10 +47,10 @@ class FeatureExtractor:
                 input_shape=(224, 224, 3)
             )
             
-            # Set to inference mode (not trainable)
+            # Set ke mode inference (tidak trainable)
             self.model.trainable = False
             
-            # Warm up model (first prediction is slow due to graph compilation)
+            # Warm up model (prediksi pertama lambat karena kompilasi graph)
             logger.info("Warming up MobileNetV3 model...")
             dummy_image = np.zeros((1, 224, 224, 3), dtype=np.float32)
             _ = self.model.predict(dummy_image, verbose=0)
@@ -63,7 +62,7 @@ class FeatureExtractor:
             raise
     
     def _load_scaler(self):
-        """Load StandardScaler from training (CRITICAL!)"""
+        """Muat StandardScaler dari training (KRITIS!)"""
         try:
             if self.scaler_path and Path(self.scaler_path).exists():
                 logger.info(f"Loading StandardScaler from {self.scaler_path}")
@@ -80,35 +79,35 @@ class FeatureExtractor:
     
     def extract(self, image: np.ndarray) -> np.ndarray:
         """
-        Extract features from image (RGB, 0-255)
-        Uses EXACT same normalization as training (ImageNet standard)
+        Ekstrak fitur dari gambar (RGB, 0-255)
+        Menggunakan normalisasi yang SAMA PERSIS dengan training (standar ImageNet)
         
         Args:
-            image: Raw resized image (224x224x3, RGB, 0-255 range)
+            image: Gambar resized raw (224x224x3, RGB, range 0-255)
             
         Returns:
-            Feature vector (960 dimensions)
+            Vector fitur (960 dimensi)
         """
         try:
-            # Ensure image has batch dimension
+            # Pastikan gambar memiliki dimensi batch
             if len(image.shape) == 3:
                 image = np.expand_dims(image, axis=0)
             
-            # Apply EXACT same preprocessing as training:
-            # 1. Convert to float32
-            # 2. Scale to [0, 1]
-            # 3. Normalize with ImageNet mean/std (PyTorch standard)
+            # Terapkan preprocessing yang SAMA PERSIS dengan training:
+            # 1. Konversi ke float32
+            # 2. Scale ke [0, 1]
+            # 3. Normalisasi dengan mean/std ImageNet (standar PyTorch)
             preprocessed = image.astype(np.float32) / 255.0
             
-            # ImageNet normalization (same as PyTorch training)
+            # Normalisasi ImageNet (sama dengan training PyTorch)
             mean = np.array([0.485, 0.456, 0.406])
             std = np.array([0.229, 0.224, 0.225])
             preprocessed = (preprocessed - mean) / std
             
-            # Extract features
+            # Ekstrak fitur
             features = self.model.predict(preprocessed, verbose=0)
             
-            # Apply StandardScaler normalization (same as training!)
+            # Terapkan normalisasi StandardScaler (sama dengan training!)
             features_flat = features.flatten().reshape(1, -1)
             
             if self.scaler is not None:

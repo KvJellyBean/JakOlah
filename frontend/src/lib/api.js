@@ -1,21 +1,15 @@
 /**
- * API utility functions for JakOlah
- * Handles communication with backend services
+ * Fungsi utilitas API untuk JakOlah Interface
+ * Menangani komunikasi dengan layanan backend
  */
 
-// API Base URLs
+// URL Base API
 const ML_SERVICE_URL =
   process.env.NEXT_PUBLIC_ML_SERVICE_URL || "http://localhost:8000";
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-/**
- * Fetch waste disposal facilities from Supabase
- * @param {Object} options - Query options
- * @param {string} options.wasteCategory - Filter by waste category ('Organik', 'Anorganik', 'Lainnya')
- * @param {number} options.limit - Limit number of results
- * @returns {Promise<Array>} Array of facilities
- */
+// Mengambil data fasilitas pembuangan sampah dari Supabase
 export async function getFacilities({
   wasteCategory = null,
   limit = 100,
@@ -27,11 +21,11 @@ export async function getFacilities({
       );
     }
 
-    // Supabase RPC endpoint
+    // Endpoint RPC Supabase
     const url = `${SUPABASE_URL}/rest/v1/rpc/get_facilities_with_categories`;
 
     const response = await fetch(url, {
-      method: "POST", // RPC requires POST
+      method: "POST", // RPC memerlukan POST
       headers: {
         apikey: SUPABASE_ANON_KEY,
         Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
@@ -53,11 +47,7 @@ export async function getFacilities({
   }
 }
 
-/**
- * Classify waste in image using ML service
- * @param {Blob|File} imageBlob - Image to classify
- * @returns {Promise<Object>} Classification results
- */
+// Klasifikasi sampah dalam gambar menggunakan layanan ML
 export async function classifyFrame(imageBlob) {
   try {
     if (!ML_SERVICE_URL) {
@@ -85,10 +75,7 @@ export async function classifyFrame(imageBlob) {
   }
 }
 
-/**
- * Check ML service health
- * @returns {Promise<Object>} Health status
- */
+// Cek health layanan ML
 export async function checkMLServiceHealth() {
   try {
     const response = await fetch(`${ML_SERVICE_URL}/health`);
@@ -103,19 +90,14 @@ export async function checkMLServiceHealth() {
   }
 }
 
-/**
- * Optimize image before uploading
- * @param {HTMLCanvasElement} canvas - Canvas with image
- * @param {Object} options - Optimization options
- * @returns {Promise<Blob>} Optimized image blob
- */
+// Optimalkan gambar sebelum upload
 export async function optimizeImage(
   canvas,
   { quality = 0.8, maxWidth = 1280, maxHeight = 720 } = {}
 ) {
   return new Promise((resolve, reject) => {
     try {
-      // Check if resize needed
+      // Cek apakah perlu resize
       let targetWidth = canvas.width;
       let targetHeight = canvas.height;
 
@@ -128,7 +110,7 @@ export async function optimizeImage(
         targetHeight = Math.floor(canvas.height * ratio);
       }
 
-      // Create resized canvas if needed
+      // Buat canvas baru dengan ukuran yang di-resize jika perlu
       if (targetWidth !== canvas.width || targetHeight !== canvas.height) {
         const resizedCanvas = document.createElement("canvas");
         resizedCanvas.width = targetWidth;
@@ -149,7 +131,7 @@ export async function optimizeImage(
           quality
         );
       } else {
-        // Use original size
+        // Gunakan ukuran original
         canvas.toBlob(
           blob => {
             if (blob) {

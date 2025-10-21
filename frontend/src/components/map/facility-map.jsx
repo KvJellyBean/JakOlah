@@ -14,8 +14,8 @@ import {
 import { getFacilities } from "@/lib/api";
 
 /**
- * FacilityMap Component
- * Real Leaflet map with facility markers, user location, and filtering
+ * Komponen FacilityMap
+ * Peta Leaflet real dengan marker fasilitas, lokasi pengguna, dan filtering
  */
 const FacilityMap = ({
   onLocationRoute,
@@ -24,7 +24,7 @@ const FacilityMap = ({
   onTabChange,
   currentFilter = "Semua",
   detectedWasteCategories = [],
-  hasDetections = false, // New prop: show list only after camera detection
+  hasDetections = false,
   className = "",
 }) => {
   const [locations, setLocations] = useState([]);
@@ -50,7 +50,7 @@ const FacilityMap = ({
     { label: "Produk Kreatif", value: "Produk Kreatif" },
   ];
 
-  // Fetch facilities from API
+  // Fetch facilities dari API
   useEffect(() => {
     const fetchFacilities = async () => {
       try {
@@ -59,7 +59,7 @@ const FacilityMap = ({
 
         const data = await getFacilities();
 
-        // Transform Supabase data - show coordinates for simplicity
+        // Transform Supabase data
         const transformedData = data.map(facility => {
           const lat = parseFloat(facility.latitude);
           const lng = parseFloat(facility.longitude);
@@ -88,7 +88,7 @@ const FacilityMap = ({
     fetchFacilities();
   }, []);
 
-  // Get user location on mount
+  // Untuk mendapatkan lokasi pengguna
   useEffect(() => {
     const fetchUserLocation = async () => {
       try {
@@ -110,7 +110,7 @@ const FacilityMap = ({
     fetchUserLocation();
   }, []);
 
-  // Helper to calculate distance for limiting (defined before useMemo)
+  // Untuk menghitung jarak antara fasilitas dan lokasi pengguna
   const calculateDistanceForLimit = (facility, userLoc) => {
     const lat = facility.position?.lat ?? facility.latitude;
     const lng = facility.position?.lng ?? facility.longitude;
@@ -128,15 +128,12 @@ const FacilityMap = ({
     return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   };
 
-  // Sort and filter locations with max 5 closest per category
+  // Sort & filter lokasi dengan maksimal 5 terdekat per kategori
   const processedLocations = useMemo(() => {
     let filtered = locations;
 
-    // SMART FILTERING: Auto-filter based on detected waste categories
     if (detectedWasteCategories && detectedWasteCategories.length > 0) {
-      // Filter facilities that accept ANY of the detected waste types
       filtered = locations.filter(facility => {
-        // Check if facility accepts any of the detected waste categories
         return (
           facility.wasteTypes &&
           facility.wasteTypes.some(wasteType =>
@@ -145,19 +142,18 @@ const FacilityMap = ({
         );
       });
 
-      // If no matching facilities found, fallback to all locations
+      // Melakukan fallback ke semua lokasi jika tidak ada yang cocok
       if (filtered.length === 0) {
         filtered = locations;
       }
     }
 
-    // Apply manual category filter on top (if not "Semua")
+    // Menerapkan category filter
     if (currentFilter && currentFilter !== "Semua") {
-      // Apply category filter (manual filter)
       filtered = filtered.filter(loc => loc.type === currentFilter);
     }
 
-    // Always limit to 5 closest per category (for all filters)
+    // Menerapkan batasan 5 terdekat per kategori (untuk semua filter)
     if (userLocation) {
       const byCategory = {};
 
@@ -168,7 +164,7 @@ const FacilityMap = ({
         byCategory[category].push(facility);
       });
 
-      // Take 5 closest from each category
+      // Ambil 5 terdekat dari setiap kategori
       filtered = [];
       Object.keys(byCategory).forEach(category => {
         const sorted = byCategory[category]
@@ -182,12 +178,12 @@ const FacilityMap = ({
       });
     }
 
-    // Sort by distance if user location available
+    // Sortir berdasarkan jarak jika lokasi pengguna tersedia
     if (userLocation) {
       filtered = sortFacilitiesByDistance(filtered, userLocation);
     }
 
-    // Map facility type to colors (hex codes for map markers)
+    // Warna berdasarkan tipe fasilitas
     const typeColorMap = {
       TPA: "#ef4444",
       TPS3R: "#3b82f6",
@@ -198,7 +194,7 @@ const FacilityMap = ({
       "Daur Ulang": "#f97316",
     };
 
-    // Add number, color, hours, distance for display
+    // Keterangan tambahan untuk setiap lokasi
     return filtered.map((loc, index) => ({
       ...loc,
       number: index + 1,
@@ -208,7 +204,7 @@ const FacilityMap = ({
     }));
   }, [locations, currentFilter, userLocation, detectedWasteCategories]);
 
-  // Pagination calculations
+  // Pagination
   const totalPages = Math.ceil(processedLocations.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
@@ -216,7 +212,7 @@ const FacilityMap = ({
 
   const handleFilterClick = filter => {
     onFilterChange?.(filter);
-    setCurrentPage(1); // Reset to page 1 when filter changes
+    setCurrentPage(1);
   };
 
   const handleNextPage = () => {
@@ -362,7 +358,7 @@ const FacilityMap = ({
           </Card>
         </div>
 
-        {/* Location List - Show only after camera detection */}
+        {/* Location List */}
         {hasDetections ? (
           <Card className="shadow-sm border border-gray-200 !pt-0">
             <CardHeader className="border-b border-gray-100 border-l-4 border-l-emerald-500 pt-6 rounded-t-lg">
@@ -410,14 +406,13 @@ const FacilityMap = ({
                       color={location.color}
                       number={location.number}
                       onRouteClick={() => {
-                        // Trigger routing on map
+                        // Untuk memicu fungsionalitas rute ke fasilitas di peta
                         if (
                           typeof window !== "undefined" &&
                           window.routeToFacility
                         ) {
                           window.routeToFacility(location.id);
                         }
-                        // Also call parent handler if provided
                         onLocationRoute?.(location);
                       }}
                     />
