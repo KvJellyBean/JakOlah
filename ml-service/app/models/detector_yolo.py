@@ -1,6 +1,6 @@
 """
 YOLO Detector
-YOLOv11 for general object detection
+YOLOv11 untuk deteksi objek umum
 """
 import numpy as np
 import cv2
@@ -19,16 +19,16 @@ except ImportError:
 
 class YOLODetector:
     """
-    YOLOv11 object detector
-    Detects general objects in images using pretrained YOLO
+    Detector objek YOLOv11
+    Mendeteksi objek umum dalam gambar menggunakan YOLO pretrained
     """
     
     def __init__(self, confidence_threshold: float = 0.4):
         """
-        Initialize YOLO detector
+        Inisialisasi detector YOLO
         
         Args:
-            confidence_threshold: Minimum confidence for detections (default: 0.4)
+            confidence_threshold: Confidence minimum untuk deteksi (default: 0.4)
         """
         if not YOLO_AVAILABLE:
             raise ImportError(
@@ -41,13 +41,13 @@ class YOLODetector:
         self._load_model()
     
     def _load_model(self):
-        """Load YOLOv11 model with optimizations"""
+        """Muat model YOLOv11 dengan optimasi"""
         try:
             logger.info("Loading YOLOv11 model...")
-            # Load custom trained model with performance optimizations
+            # Muat model custom terlatih dengan optimasi performa
             self.model = YOLO('./models/best.pt')
             
-            # Warm up model (first prediction is always slow)
+            # Warm up model (prediksi pertama selalu lambat)
             logger.info("Warming up YOLO model...")
             dummy_image = np.zeros((640, 640, 3), dtype=np.uint8)
             _ = self.model(dummy_image, conf=self.confidence_threshold, verbose=False)
@@ -60,16 +60,16 @@ class YOLODetector:
     
     def detect(self, image: np.ndarray) -> List[Dict]:
         """
-        Detect objects in image with optimized settings
+        Deteksi objek dalam gambar dengan setting teroptimasi
         
         Args:
-            image: Input image (RGB numpy array, HxWx3)
+            image: Gambar input (RGB numpy array, HxWx3)
             
         Returns:
-            List of detections with format:
+            List deteksi dengan format:
             [
                 {
-                    'box': [ymin, xmin, ymax, xmax],  # Normalized coordinates
+                    'box': [ymin, xmin, ymax, xmax],  # Koordinat normalized
                     'confidence': float,
                     'class_id': int,
                     'class_name': str
@@ -84,10 +84,10 @@ class YOLODetector:
             
             height, width = image.shape[:2]
             
-            # Run YOLO inference with optimized settings
-            # imgsz=640 for better speed-accuracy tradeoff
-            # max_det=10 to limit detections
-            # agnostic_nms=True for better NMS
+            # Jalankan YOLO inference dengan setting teroptimasi
+            # imgsz=640 untuk tradeoff kecepatan-akurasi yang lebih baik
+            # max_det=10 untuk membatasi deteksi
+            # agnostic_nms=True untuk NMS yang lebih baik
             results = self.model(
                 image, 
                 conf=self.confidence_threshold,
@@ -99,15 +99,15 @@ class YOLODetector:
             
             detections = []
             
-            # Process results
+            # Proses hasil
             for result in results:
                 boxes = result.boxes
                 
                 for box in boxes:
-                    # Get box coordinates (xyxy format)
+                    # Dapatkan koordinat box (format xyxy)
                     x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
                     
-                    # Convert to normalized coordinates [ymin, xmin, ymax, xmax]
+                    # Konversi ke koordinat normalized [ymin, xmin, ymax, xmax]
                     normalized_box = [
                         float(y1 / height),  # ymin
                         float(x1 / width),   # xmin
@@ -115,7 +115,7 @@ class YOLODetector:
                         float(x2 / width)    # xmax
                     ]
                     
-                    # Get confidence and class
+                    # Dapatkan confidence dan class
                     conf = float(box.conf[0].cpu().numpy())
                     cls = int(box.cls[0].cpu().numpy())
                     class_name = self.model.names[cls]

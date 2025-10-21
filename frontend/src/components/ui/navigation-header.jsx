@@ -8,10 +8,8 @@ const NavigationHeader = ({
   items = [],
   showBackButton = false,
   backLabel = "Kembali ke Beranda",
-  showLoginButton = true,
   className = "",
   onBackClick,
-  onLoginClick,
   onItemClick,
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);

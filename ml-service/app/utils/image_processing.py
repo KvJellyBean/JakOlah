@@ -1,6 +1,6 @@
 """
 Image Processing Utilities
-Handles image preprocessing for ML models
+Menangani preprocessing gambar untuk model ML
 """
 import cv2
 import numpy as np
@@ -10,24 +10,24 @@ from typing import Tuple
 
 def decode_image_bytes(image_bytes: bytes) -> np.ndarray:
     """
-    Decode image bytes to numpy array
+    Decode byte gambar ke numpy array
     
     Args:
-        image_bytes: Raw image bytes
+        image_bytes: Byte gambar raw
         
     Returns:
-        numpy array representing the image
+        numpy array yang merepresentasikan gambar
     """
-    # Convert bytes to numpy array
+    # Konversi byte ke numpy array
     nparr = np.frombuffer(image_bytes, np.uint8)
     
-    # Decode image
+    # Decode gambar
     image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     
     if image is None:
         raise ValueError("Failed to decode image")
     
-    # Convert BGR to RGB
+    # Konversi BGR ke RGB
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     
     return image
@@ -38,22 +38,22 @@ def preprocess_for_classification(
     input_size: Tuple[int, int] = (224, 224)
 ) -> np.ndarray:
     """
-    Preprocess image for classification model (MobileNetV3)
-    EXACT MATCH with training pipeline (PyTorch transforms)
+    Preprocess gambar untuk model klasifikasi (MobileNetV3)
+    COCOK PERSIS dengan pipeline training (transformasi PyTorch)
     
     Args:
-        image: Input image as numpy array (RGB, 0-255)
-        input_size: Target input size for model
+        image: Gambar input sebagai numpy array (RGB, 0-255)
+        input_size: Ukuran input target untuk model
         
     Returns:
-        Resized image (RGB, 0-255) ready for feature extractor
+        Gambar di-resize (RGB, 0-255) siap untuk feature extractor
     """
-    # Resize to 224x224 WITHOUT maintaining aspect ratio (same as training)
-    # OpenCV resize uses (width, height) format
+    # Resize ke 224x224 TANPA mempertahankan aspect ratio (sama seperti training)
+    # Resize OpenCV menggunakan format (width, height)
     resized = cv2.resize(image, input_size, interpolation=cv2.INTER_LINEAR)
     
-    # Return raw resized image (0-255)
-    # Feature extractor will apply ImageNet normalization
+    # Return gambar resized raw (0-255)
+    # Feature extractor akan menerapkan normalisasi ImageNet
     return resized
 
 
@@ -63,20 +63,20 @@ def crop_image(
     padding: int = 10
 ) -> np.ndarray:
     """
-    Crop image using bounding box with optional padding
+    Crop gambar menggunakan bounding box dengan padding opsional
     
     Args:
-        image: Input image as numpy array
-        bbox: Bounding box as (x, y, width, height)
-        padding: Padding pixels around bbox
+        image: Gambar input sebagai numpy array
+        bbox: Bounding box sebagai (x, y, width, height)
+        padding: Pixel padding di sekitar bbox
         
     Returns:
-        Cropped image
+        Gambar yang di-crop
     """
     height, width = image.shape[:2]
     x, y, w, h = bbox
     
-    # Add padding
+    # Tambahkan padding
     x1 = max(0, x - padding)
     y1 = max(0, y - padding)
     x2 = min(width, x + w + padding)
@@ -90,14 +90,14 @@ def crop_image(
 
 def validate_image(image: np.ndarray, min_size: Tuple[int, int] = (224, 224)) -> bool:
     """
-    Validate image meets minimum requirements
+    Validasi gambar memenuhi persyaratan minimum
     
     Args:
-        image: Input image as numpy array
-        min_size: Minimum (width, height) required
+        image: Gambar input sebagai numpy array
+        min_size: Ukuran minimum (width, height) yang diperlukan
         
     Returns:
-        True if valid, False otherwise
+        True jika valid, False jika tidak
     """
     if image is None or len(image.shape) < 2:
         return False

@@ -52,8 +52,6 @@ export default function InformasiPage() {
           { href: "/klasifikasi", label: "Klasifikasi" },
           { href: "/informasi", label: "Informasi", active: true },
         ]}
-        showLoginButton
-        onLoginClick={() => router.push("/masuk")}
       />
 
       <div className="max-w-7xl mx-auto px-4 py-6 md:py-8">
@@ -68,7 +66,7 @@ export default function InformasiPage() {
         </div>
 
         <div className="space-y-6 md:space-y-8">
-          {/* About JakOlah */}
+          {/* Tentang JakOlah */}
           <Card className="shadow-sm border border-gray-200 !pt-0">
             <CardHeader className="border-b border-gray-100 border-l-4 border-l-emerald-500 pt-6 rounded-t-lg">
               <CardTitle className="text-lg md:text-xl text-gray-900 flex items-center space-x-2">
@@ -112,7 +110,7 @@ export default function InformasiPage() {
             </CardContent>
           </Card>
 
-          {/* Developer */}
+          {/* Pengembang */}
           <Card className="shadow-sm border border-gray-200 !pt-0">
             <CardHeader className="border-b border-gray-100 border-l-4 border-l-emerald-500 pt-6 rounded-t-lg">
               <CardTitle className="text-lg md:text-xl text-gray-900 flex items-center space-x-2">
@@ -140,7 +138,6 @@ export default function InformasiPage() {
                   </p>
                   <div className="flex space-x-4 text-sm max-md:flex-col max-md:space-x-0 max-md:space-y-2">
                     <span className="text-gray-600">
-                      {/* email logo */}
                       📧 Email: kevin.535220084@stu.untar.ac.id
                     </span>
                     <span className="text-gray-600">
@@ -170,7 +167,7 @@ export default function InformasiPage() {
             </CardContent>
           </Card>
 
-          {/* Technology & Dataset */}
+          {/* Teknologi & Dataset */}
           <Card className="shadow-sm border border-gray-200 !pt-0">
             <CardHeader className="border-b border-gray-100 border-l-4 border-l-emerald-500 pt-6 rounded-t-lg">
               <CardTitle className="text-lg md:text-xl text-gray-900 flex items-center space-x-2">

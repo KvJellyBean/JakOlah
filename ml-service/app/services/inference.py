@@ -1,6 +1,6 @@
 """
 Inference Service
-Combines YOLO detector and MobileNetV3-SVM classifier for waste classification
+Menggabungkan detector dan MobileNetV3-SVM classifier untuk klasifikasi sampah
 """
 import numpy as np
 import time
@@ -21,8 +21,8 @@ logger = logging.getLogger(__name__)
 
 class InferenceService:
     """
-    Main inference service for waste classification
-    Orchestrates detection and classification pipeline
+    Service inference utama untuk klasifikasi sampah
+    Mengorkestrasi pipeline deteksi dan klasifikasi
     """
     
     def __init__(
@@ -30,23 +30,23 @@ class InferenceService:
         detector_model_path: str,
         classifier_model_path: str,
         scaler_path: str = None,
-        confidence_threshold: float = 0.4,  # 🔧 Increased from 0.3 to 0.4 (reduce false positives)
+        confidence_threshold: float = 0.4,
         max_detections: int = 10
     ):
         """
-        Initialize inference service with models
+        Inisialisasi service inference dengan model
         
         Args:
-            detector_model_path: Path to TFLite detector
-            classifier_model_path: Path to SVM classifier
-            scaler_path: Path to StandardScaler .pkl (REQUIRED!)
-            confidence_threshold: Minimum confidence for detections
-            max_detections: Maximum number of objects to return
+            detector_model_path: Path ke detector TFLite
+            classifier_model_path: Path ke classifier SVM
+            scaler_path: Path ke StandardScaler .pkl (WAJIB!)
+            confidence_threshold: Confidence minimum untuk deteksi
+            max_detections: Jumlah maksimum objek yang dikembalikan
         """
         self.confidence_threshold = confidence_threshold
         self.max_detections = max_detections
         
-        # Load models
+        # Muat model
         logger.info("Initializing inference service...")
         self.detector = YOLODetector(confidence_threshold)
         self.feature_extractor = FeatureExtractor(scaler_path=scaler_path)
@@ -55,21 +55,21 @@ class InferenceService:
     
     def process_image(self, image: np.ndarray) -> Dict:
         """
-        Process image through full inference pipeline:
-        1. YOLO detects objects (bounding boxes)
-        2. MobileNetV3 extracts features from each detection
-        3. SVM classifies waste category
+        Proses gambar melalui full inference pipeline:
+        1. YOLO mendeteksi objek (bounding boxes)
+        2. MobileNetV3 mengekstrak fitur dari setiap deteksi
+        3. SVM mengklasifikasi kategori sampah
         
         Args:
-            image: Input image (RGB numpy array)
+            image: Input gambar (RGB numpy array)
             
         Returns:
-            Dictionary with detections and metadata
+            Dictionary dengan deteksi dan metadata
         """
         start_time = time.time()
         
         try:
-            # Validate input image
+            # Validasi gambar input
             if not validate_image(image, min_size=(224, 224)):
                 return {
                     'detections': [],
@@ -77,7 +77,7 @@ class InferenceService:
                     'error': 'Image too small (minimum 224x224 required)'
                 }
             
-            # Step 1: YOLO object detection
+            # Step 1: Deteksi objek YOLO
             detections = self.detector.detect(image)
             
             if not detections:
@@ -87,48 +87,46 @@ class InferenceService:
                     'message': 'No objects detected in image'
                 }
             
-            # Step 2: Process each detection with CNN-SVM classifier
+            # Step 2: Proses setiap deteksi dengan CNN-SVM classifier
             results = []
             height, width = image.shape[:2]
             
             for i, detection in enumerate(detections[:self.max_detections]):
                 try:
-                    # Convert normalized box to pixel coordinates
+                    # Konversi normalized box ke koordinat pixel
                     box = detection['box']  # [ymin, xmin, ymax, xmax] normalized
                     
-                    # Scale to original image size
+                    # Scale ke ukuran gambar original
                     ymin, xmin, ymax, xmax = box
                     x = int(xmin * width)
                     y = int(ymin * height)
                     bbox_width = int((xmax - xmin) * width)
                     bbox_height = int((ymax - ymin) * height)
                     
-                    # Skip too small detections (likely false positives)
+                    # Lewati deteksi yang terlalu kecil (kemungkinan false positives)
                     if bbox_width < 50 or bbox_height < 50:
                         logger.debug(f"Skipping detection {i}: bbox too small ({bbox_width}x{bbox_height})")
                         continue
                     
-                    # Crop detected region (no expansion - use tight crop)
+                    # Crop region yang terdeteksi (tanpa expansion - gunakan tight crop)
                     cropped = crop_image(image, (x, y, bbox_width, bbox_height), padding=10)
                     
                     if cropped is None or cropped.size == 0:
                         logger.warning(f"Failed to crop detection {i}")
                         continue
                     
-                    # Preprocess for classification (resize to 224x224)
+                    # Preprocess untuk klasifikasi (resize ke 224x224)
                     preprocessed = preprocess_for_classification(cropped)
                     
-                    # Extract features with MobileNetV3
+                    # Ekstrak fitur dengan MobileNetV3
                     features = self.feature_extractor.extract(preprocessed)
                     
-                    # Classify with SVM
+                    # Klasifikasi dengan SVM
                     category, confidence, all_confidences = self.classifier.classify(features)
                     
-                    # HYBRID MODE: Use YOLO if SVM confidence is low
                     yolo_class = detection.get('class_name', 'unknown')
                     yolo_conf = detection.get('confidence', 0.0)
                     
-                    # If SVM confidence < 0.6 AND YOLO confidence > 0.65, trust YOLO
                     final_category = category
                     final_confidence = confidence
                     classification_source = "svm"
@@ -139,11 +137,11 @@ class InferenceService:
                         classification_source = "yolo_fallback"
                         logger.info(f"[Detection {i+1}] Using YOLO fallback: {final_category} (SVM conf too low: {confidence:.2%})")
                     
-                    # Build result
+                    # Bangun hasil
                     result = {
                         'category': final_category,
                         'confidence': round(final_confidence, 3),
-                        'classification_source': classification_source,  # Track which model was used
+                        'classification_source': classification_source,
                         'bbox': {
                             'x': x,
                             'y': y,
@@ -188,7 +186,7 @@ class InferenceService:
             }
     
 
-# Global inference service instance
+# Instance global inference service
 _inference_service: Optional[InferenceService] = None
 
 
@@ -200,17 +198,17 @@ def get_inference_service(
     force_reload: bool = False
 ) -> InferenceService:
     """
-    Get or create global inference service instance
+    Dapatkan atau buat instance global inference service
     
     Args:
-        detector_path: Path to YOLO model (optional, auto-downloads if None)
-        classifier_path: Path to SVM classifier (.pkl)
-        scaler_path: Path to StandardScaler (.pkl) - REQUIRED!
-        confidence_threshold: Minimum confidence for detections (default: 0.4)
-        force_reload: Force reload models
+        detector_path: Path ke model YOLO (opsional, auto-download jika None)
+        classifier_path: Path ke classifier SVM (.pkl)
+        scaler_path: Path ke StandardScaler (.pkl) - WAJIB!
+        confidence_threshold: Confidence minimum untuk deteksi (default: 0.4)
+        force_reload: Paksa reload model
         
     Returns:
-        Inference service instance
+        Instance inference service
     """
     global _inference_service
     

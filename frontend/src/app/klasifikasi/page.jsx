@@ -13,18 +13,16 @@ export default function KlasifikasiPage() {
   const [detectedWasteCategories, setDetectedWasteCategories] = useState([]);
   const liveCameraRef = useRef(null);
 
-  // T052: Session management
   const { addClassification, getSessionSummary } = useClassificationSession();
 
-  // Cleanup camera when page unmounts OR switching tabs
+  // Bersihkan kamera saat halaman di-unmount ATAU saat berpindah tab
   useEffect(() => {
-    // Stop camera when switching from camera tab to lokasi tab
     if (activeTab !== "camera") {
       liveCameraRef.current?.stopStream();
     }
 
     return () => {
-      // Force stop camera when leaving page completely
+      // Force stop camera ketika di-unmount ATAU tab berubah
       liveCameraRef.current?.stopStream();
     };
   }, [activeTab]);
@@ -48,17 +46,14 @@ export default function KlasifikasiPage() {
   };
 
   const handleClassificationResult = result => {
-    // T052: Add to session tracking
     addClassification(result);
 
-    // Extract unique waste categories from detections and ACCUMULATE
-    // Include ALL categories (even "Lainnya") to show map after any detection
+    // Tambahkan semua kategori untuk menampilkan peta setelah deteksi
     if (result.detections && result.detections.length > 0) {
       const newCategories = result.detections
         .map(d => d.category)
-        .filter(c => c); // Just filter null/undefined
+        .filter(c => c); // untuk menghindari nilai null/undefined
 
-      // Merge with existing categories (keep unique)
       setDetectedWasteCategories(prev => {
         const combined = [...new Set([...prev, ...newCategories])];
         return combined;
@@ -71,7 +66,7 @@ export default function KlasifikasiPage() {
       {/* Navigation */}
       <NavigationHeader items={navItems} className="bg-white text-gray-900" />
 
-      {/* Tabs: Camera / Lokasi */}
+      {/* Tabs: Kamera / Lokasi */}
       <div className="bg-gray-900 border-b border-gray-800">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex">

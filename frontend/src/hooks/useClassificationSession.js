@@ -1,7 +1,6 @@
 /**
  * Classification Session Hook
- * T052: Session management for classifications
- * Tracks classification history, statistics, and session info
+ * untuk melacak sesi klasifikasi pengguna
  */
 
 import { useState, useCallback, useEffect } from "react";
@@ -21,7 +20,7 @@ export function useClassificationSession() {
     },
   });
 
-  // Initialize session on mount
+  // Inisialisasi sesi saat mount
   useEffect(() => {
     setSession(prev => ({
       ...prev,
@@ -31,13 +30,13 @@ export function useClassificationSession() {
   }, []);
 
   /**
-   * Add classification result to session
+   * Tambahkan hasil klasifikasi ke sesi
    */
   const addClassification = useCallback(result => {
     setSession(prev => {
       const isSuccess = result.detections && result.detections.length > 0;
 
-      // Update category stats
+      // Update stats per kategori
       const newStats = { ...prev.stats };
       if (isSuccess) {
         result.detections.forEach(detection => {
@@ -47,7 +46,7 @@ export function useClassificationSession() {
         });
       }
 
-      // Add to history (keep last 50)
+      // Add history
       const newHistory = [
         {
           timestamp: new Date().toISOString(),
@@ -90,7 +89,7 @@ export function useClassificationSession() {
   }, []);
 
   /**
-   * Get session summary
+   * Akumulasi data sesi
    */
   const getSessionSummary = useCallback(() => {
     const duration = session.startTime
@@ -115,7 +114,7 @@ export function useClassificationSession() {
   }, [session]);
 
   /**
-   * Export session data for download/sharing
+   * Ekspor data sesi
    */
   const exportSession = useCallback(() => {
     return {

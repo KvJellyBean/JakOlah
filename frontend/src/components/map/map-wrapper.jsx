@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 
 /**
- * MapWrapper Component
- * Client-side wrapper untuk Leaflet map yang menghindari SSR issues
+ * Komponen MapWrapper
+ * Wrapper client-side untuk Leaflet map
  */
 const MapWrapper = ({
   center,
@@ -18,7 +18,6 @@ const MapWrapper = ({
   const [Map, setMap] = useState(null);
 
   useEffect(() => {
-    // Import SimpleLeafletMap only on client-side
     const loadMap = async () => {
       try {
         const mapModule = await import("./simple-leaflet-map");
