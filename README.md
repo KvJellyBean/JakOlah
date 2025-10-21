@@ -280,7 +280,7 @@ If you have suggestions for improvements:
 [issues-shield]: https://img.shields.io/github/issues/KvJellyBean/JakOlah.svg?style=for-the-badge
 [issues-url]: https://github.com/KvJellyBean/JakOlah/issues
 
-[product-screenshot]: UI/PC/Beranda PC.png
+[product-screenshot]: UI/PC/Beranda%20PC.png
 
 <!-- Technology Badges -->
 
