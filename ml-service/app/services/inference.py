@@ -1,6 +1,9 @@
 """
 Inference Service
-Menggabungkan detector dan MobileNetV3-SVM classifier untuk klasifikasi sampah
+Pipeline klasifikasi sampah:
+1. best.pt - Detector untuk mendeteksi objek (hanya bounding box, TIDAK mengklasifikasi)
+2. MobileNetV3 - Feature extractor untuk ekstraksi fitur 960-dimensi dari objek yang di-crop
+3. SVM (MobileNetV3_poly_model.pkl) - Classifier untuk kategori sampah (Organik/Anorganik/Lainnya)
 """
 import numpy as np
 import time
@@ -56,15 +59,30 @@ class InferenceService:
     def process_image(self, image: np.ndarray) -> Dict:
         """
         Proses gambar melalui full inference pipeline:
-        1. YOLO mendeteksi objek (bounding boxes)
-        2. MobileNetV3 mengekstrak fitur dari setiap deteksi
-        3. SVM mengklasifikasi kategori sampah
+        1. best.pt mendeteksi objek dan menghasilkan bounding boxes
+        2. Crop setiap objek yang terdeteksi dari gambar original
+        3. MobileNetV3 mengekstrak fitur 960-dimensi dari setiap objek yang di-crop
+        4. SVM (MobileNetV3_poly_model.pkl) mengklasifikasi kategori sampah (Organik/Anorganik/Lainnya)
         
         Args:
             image: Input gambar (RGB numpy array)
             
         Returns:
-            Dictionary dengan deteksi dan metadata
+            Dictionary dengan deteksi dan metadata:
+            {
+                'detections': [
+                    {
+                        'category': str (Organik/Anorganik/Lainnya),
+                        'confidence': float (0-1),
+                        'classification_source': 'cnn_svm',
+                        'bbox': {'x', 'y', 'width', 'height'},
+                        'all_confidences': {kategori: confidence},
+                        'yolo_detection_confidence': float (confidence YOLO untuk deteksi objek)
+                    }
+                ],
+                'processing_time_ms': int,
+                'image_size': {'width', 'height'}
+            }
         """
         start_time = time.time()
         
@@ -108,8 +126,9 @@ class InferenceService:
                         logger.debug(f"Skipping detection {i}: bbox too small ({bbox_width}x{bbox_height})")
                         continue
                     
-                    # Crop region yang terdeteksi (tanpa expansion - gunakan tight crop)
-                    cropped = crop_image(image, (x, y, bbox_width, bbox_height), padding=10)
+                    # Crop region yang terdeteksi dengan padding moderat
+                    # Padding 15px memberikan context yang cukup tanpa terlalu banyak noise
+                    cropped = crop_image(image, (x, y, bbox_width, bbox_height), padding=15)
                     
                     if cropped is None or cropped.size == 0:
                         logger.warning(f"Failed to crop detection {i}")
@@ -124,24 +143,14 @@ class InferenceService:
                     # Klasifikasi dengan SVM
                     category, confidence, all_confidences = self.classifier.classify(features)
                     
-                    yolo_class = detection.get('class_name', 'unknown')
+                    # YOLO hanya untuk deteksi, bukan klasifikasi
                     yolo_conf = detection.get('confidence', 0.0)
                     
-                    final_category = category
-                    final_confidence = confidence
-                    classification_source = "svm"
-                    
-                    if confidence < 0.8 and yolo_conf > 0.15:
-                        final_category = yolo_class
-                        final_confidence = yolo_conf
-                        classification_source = "yolo_fallback"
-                        logger.info(f"[Detection {i+1}] Using YOLO fallback: {final_category} (SVM conf too low: {confidence:.2%})")
-                    
-                    # Bangun hasil
+                    # Bangun hasil (SVM sebagai satu-satunya classifier)
                     result = {
-                        'category': final_category,
-                        'confidence': round(final_confidence, 3),
-                        'classification_source': classification_source,
+                        'category': category,
+                        'confidence': round(confidence, 3),
+                        'classification_source': 'cnn_svm',
                         'bbox': {
                             'x': x,
                             'y': y,
@@ -151,14 +160,14 @@ class InferenceService:
                         'all_confidences': {
                             k: round(v, 3) for k, v in all_confidences.items()
                         },
-                        'yolo_detection': {
-                            'class': yolo_class,
-                            'confidence': round(yolo_conf, 3)
-                        }
+                        'yolo_detection_confidence': round(yolo_conf, 3)
                     }
                     
                     results.append(result)
-                    logger.info(f"[Detection {i+1}] FINAL: {final_category} ({final_confidence:.2%}) via {classification_source}")
+                    
+                    # Log detail untuk debugging
+                    logger.info(f"[Detection {i+1}] RESULT: {category} ({confidence:.2%})")
+                    logger.info(f"[Detection {i+1}] All scores: Organik={all_confidences.get('Organik', 0):.2%}, Anorganik={all_confidences.get('Anorganik', 0):.2%}, Lainnya={all_confidences.get('Lainnya', 0):.2%}")
                     
                 except Exception as e:
                     logger.error(f"Failed to process detection {i}: {e}")
