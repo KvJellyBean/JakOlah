@@ -1,6 +1,8 @@
 """
 Waste Classifier
-Memuat model MobileNetV3 + SVM untuk klasifikasi kategori sampah
+SVM classifier (MobileNetV3_poly_model.pkl) untuk klasifikasi kategori sampah
+Input: Fitur 960-dimensi dari MobileNetV3 feature extractor
+Output: Kategori sampah (Organik/Anorganik/Lainnya) dengan confidence score
 """
 import numpy as np
 import pickle
@@ -13,8 +15,9 @@ logger = logging.getLogger(__name__)
 
 class WasteClassifier:
     """
-    Wrapper untuk classifier MobileNetV3 + SVM
-    Mengklasifikasi objek sampah ke dalam kategori
+    SVM classifier untuk kategori sampah
+    Menerima fitur 960-dimensi dari MobileNetV3 feature extractor
+    Mengeluarkan prediksi kategori: Organik, Anorganik, atau Lainnya
     """
     
     # Mapping kategori
@@ -76,9 +79,18 @@ class WasteClassifier:
                 logger.info("Loaded model with feature extractor")
             else:
                 self.model = model_data
-                logger.info("Loaded SVM model only")
+                logger.info("Loaded SVM model")
             
-            logger.info(f"Classifier loaded successfully")
+            # DEBUG: Log model info
+            logger.info(f"Model type: {type(self.model)}")
+            logger.info(f"Model has predict_proba: {hasattr(self.model, 'predict_proba')}")
+            logger.info(f"Model has decision_function: {hasattr(self.model, 'decision_function')}")
+            if hasattr(self.model, 'classes_'):
+                logger.info(f"Model classes: {self.model.classes_}")
+            if hasattr(self.model, 'kernel'):
+                logger.info(f"Model kernel: {self.model.kernel}")
+            
+            logger.info(f"✓ Classifier loaded successfully")
             
         except Exception as e:
             logger.error(f"Failed to load classification model: {e}")
@@ -101,6 +113,7 @@ class WasteClassifier:
             
             # Dapatkan prediksi dan probabilitas
             prediction = self.model.predict(features)[0]
+            logger.info(f"SVM prediction: class={prediction}")
             
             # Dapatkan skor confidence
             if hasattr(self.model, 'predict_proba'):

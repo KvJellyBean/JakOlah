@@ -1,6 +1,7 @@
 """
 Feature Extractor
-CNN MobileNetV3 untuk mengekstrak fitur dari gambar sampah yang di-crop
+MobileNetV3-Large untuk mengekstrak fitur 960-dimensi dari objek sampah
+Fitur ini kemudian digunakan oleh SVM classifier untuk klasifikasi kategori
 """
 import numpy as np
 import tensorflow as tf
@@ -94,14 +95,13 @@ class FeatureExtractor:
                 image = np.expand_dims(image, axis=0)
             
             # Terapkan preprocessing yang SAMA PERSIS dengan training:
-            # 1. Konversi ke float32
-            # 2. Scale ke [0, 1]
-            # 3. Normalisasi dengan mean/std ImageNet (standar PyTorch)
-            preprocessed = image.astype(np.float32) / 255.0
+            # 1. Konversi ke float32 (TETAP 0-255, tidak di-scale ke 0-1!)
+            # 2. Normalisasi dengan mean/std ImageNet dalam skala 0-255
+            preprocessed = image.astype(np.float32)
             
-            # Normalisasi ImageNet (sama dengan training PyTorch)
-            mean = np.array([0.485, 0.456, 0.406])
-            std = np.array([0.229, 0.224, 0.225])
+            # Normalisasi ImageNet (sama dengan training: mean/std dalam skala 0-255)
+            mean = np.array([0.485, 0.456, 0.406]) * 255.0  # [123.675, 116.28, 103.53]
+            std = np.array([0.229, 0.224, 0.225]) * 255.0   # [58.395, 57.375, 57.375]
             preprocessed = (preprocessed - mean) / std
             
             # Ekstrak fitur

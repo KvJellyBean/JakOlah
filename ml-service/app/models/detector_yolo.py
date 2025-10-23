@@ -1,6 +1,8 @@
 """
 YOLO Detector
-YOLOv11 untuk deteksi objek umum
+untuk deteksi objek sampah (bounding box only)
+TIDAK melakukan klasifikasi kategori - hanya mendeteksi lokasi objek
+Klasifikasi kategori dilakukan oleh CNN-SVM classifier
 """
 import numpy as np
 import cv2
@@ -19,8 +21,9 @@ except ImportError:
 
 class YOLODetector:
     """
-    Detector objek YOLOv11
-    Mendeteksi objek umum dalam gambar menggunakan YOLO pretrained
+    Object detector yang mendeteksi lokasi objek (bounding boxes) dalam gambar
+    TIDAK mengklasifikasi kategori sampah (Organik/Anorganik/Lainnya)
+    Klasifikasi dilakukan oleh CNN-SVM classifier setelah cropping
     """
     
     def __init__(self, confidence_threshold: float = 0.4):
@@ -60,7 +63,7 @@ class YOLODetector:
     
     def detect(self, image: np.ndarray) -> List[Dict]:
         """
-        Deteksi objek dalam gambar dengan setting teroptimasi
+        Deteksi lokasi objek dalam gambar (HANYA BOUNDING BOX, tidak klasifikasi kategori)
         
         Args:
             image: Gambar input (RGB numpy array, HxWx3)
@@ -69,13 +72,18 @@ class YOLODetector:
             List deteksi dengan format:
             [
                 {
-                    'box': [ymin, xmin, ymax, xmax],  # Koordinat normalized
-                    'confidence': float,
-                    'class_id': int,
-                    'class_name': str
+                    'box': [ymin, xmin, ymax, xmax],  # Koordinat normalized (0-1)
+                    'confidence': float,  # Confidence untuk deteksi objek (bukan kategori)
+                    'class_id': int,  # ID class YOLO (diabaikan untuk klasifikasi kategori)
+                    'class_name': str  # Nama class YOLO (diabaikan untuk klasifikasi kategori)
                 },
                 ...
             ]
+            
+        Note:
+            - 'class_name' dan 'class_id' dari YOLO diabaikan
+            - Kategori sampah (Organik/Anorganik/Lainnya) ditentukan oleh CNN-SVM classifier
+            - YOLO hanya digunakan untuk mendeteksi WHERE objek berada, bukan WHAT kategorinya
         """
         try:
             if image is None or len(image.shape) != 3:
