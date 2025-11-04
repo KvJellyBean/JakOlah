@@ -147,6 +147,14 @@ export const FACILITY_TYPES = {
     icon: '♻️',
     color: '#7c3aed',
   },
+  MESIN_DAUR_ULANG: {
+    id: 'mesin_daur_ulang',
+    name: 'Mesin Daur Ulang',
+    description: 'Mesin otomatis untuk daur ulang botol plastik',
+    icon: '🤖',
+    color: '#06b6d4',
+    acceptedWaste: 'Anorganik (Botol Plastik)',
+  },
 }
 
 // Navigation Routes
