@@ -59,6 +59,12 @@ BEGIN
             INSERT INTO public.waste_facility_categories (facility_id, waste_category_id)
             VALUES (NEW.facility_id, ano_category_id)
             ON CONFLICT DO NOTHING;
+            
+        -- Mesin Daur Ulang hanya menerima sampah anorganik (khususnya botol plastik)
+        WHEN 'Mesin Daur Ulang' THEN
+            INSERT INTO public.waste_facility_categories (facility_id, waste_category_id)
+            VALUES (NEW.facility_id, ano_category_id)
+            ON CONFLICT DO NOTHING;
     END CASE;
     
     RETURN NEW;
@@ -75,7 +81,7 @@ CREATE TRIGGER trigger_auto_assign_categories
 -- COMMENTS
 -- ============================================================================
 COMMENT ON FUNCTION public.auto_assign_facility_categories() IS 
-'Automatically assigns waste categories to facilities based on facility_type when a new facility is inserted';
+'Automatically assigns waste categories to facilities based on facility_type when a new facility is inserted. Includes support for Mesin Daur Ulang (anorganik/botol plastik).';
 
 COMMENT ON TRIGGER trigger_auto_assign_categories ON public.waste_facilities IS 
 'Triggers after facility insert to auto-populate waste_facility_categories junction table';

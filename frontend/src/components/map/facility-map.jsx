@@ -48,6 +48,7 @@ const FacilityMap = ({
     { label: "TPS3R", value: "TPS3R" },
     { label: "Komposting", value: "Komposting" },
     { label: "Produk Kreatif", value: "Produk Kreatif" },
+    { label: "Mesin Daur Ulang", value: "Mesin Daur Ulang" },
   ];
 
   // Fetch facilities dari API
@@ -192,6 +193,7 @@ const FacilityMap = ({
       "Produk Kreatif": "#8b5cf6",
       TPS: "#3b82f6",
       "Daur Ulang": "#f97316",
+      "Mesin Daur Ulang": "#06b6d4",
     };
 
     // Keterangan tambahan untuk setiap lokasi
@@ -342,7 +344,11 @@ const FacilityMap = ({
                     </div>
                     <div className="flex items-center space-x-2">
                       <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                      <span className="text-gray-600">Daur Ulang</span>
+                      <span className="text-gray-600">Komposting</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-3 h-3 bg-cyan-500 rounded-full"></div>
+                      <span className="text-gray-600">Mesin Daur Ulang</span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <div className="w-3 h-3 bg-red-500 rounded-full"></div>

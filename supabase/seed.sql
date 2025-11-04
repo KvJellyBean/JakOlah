@@ -20,8 +20,9 @@ INSERT INTO public.waste_facilities (facility_name, facility_type, latitude, lon
 ('Daur Ulang Pulau Pramuka', 'Produk Kreatif', -5.7459620, 106.6136577),
 ('TPS Kencana', 'TPS3R', -6.1314458, 106.8903644),
 ('Saung Budidaya Maggot', 'Komposting', -6.1361763, 106.8856933),
-('Buah Menteng Jagakarsa', 'Bank Sampah', -6.3370750, 106.8301200);
+('Buah Menteng Jagakarsa', 'Bank Sampah', -6.3370750, 106.8301200),
+('MCP Taman Permata Sunter', 'Mesin Daur Ulang', -6.129389, 106.858806);
 
 COMMENT ON TABLE public.waste_categories IS 'Seeded with three waste types';
-COMMENT ON TABLE public.waste_facilities IS 'Sample Jakarta facilities representing all 5 facility types';
+COMMENT ON TABLE public.waste_facilities IS 'Sample Jakarta facilities representing all facility types including Mesin Daur Ulang';
 COMMENT ON TABLE public.waste_facility_categories IS 'Facility-category relationships based on facility specialization';

@@ -96,7 +96,12 @@ const SimpleLeafletMap = ({
           const colorMap = {
             "Bank Sampah": "#22c55e",
             TPS: "#3b82f6",
+            TPS3R: "#3b82f6",
             "Daur Ulang": "#f97316",
+            Komposting: "#f97316",
+            "Produk Kreatif": "#8b5cf6",
+            "Mesin Daur Ulang": "#06b6d4",
+            TPA: "#ef4444",
           };
           const color = facility.color || colorMap[facility.type] || "#6b7280";
           const textColor = "#1f2937";
@@ -137,6 +142,10 @@ const SimpleLeafletMap = ({
           }).addTo(map);
 
           // Popup content
+          const wasteTypeDisplay = facility.type === "Mesin Daur Ulang" 
+            ? "Anorganik (Botol Plastik)"
+            : (facility.wasteTypes || []).join(", ");
+          
           const popupContent = `
             <div style="padding: 8px; min-width: 200px;">
               <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
@@ -150,6 +159,7 @@ const SimpleLeafletMap = ({
               </div>
               <div style="font-size: 12px; color: #666; margin: 8px 0;">
                 <p style="margin: 4px 0;">Koordinat: ${facility.address}</p>
+                ${wasteTypeDisplay ? `<p style="margin: 4px 0;">Menerima: ${wasteTypeDisplay}</p>` : ""}
                 <p style="margin: 4px 0;">Jam Buka: ${facility.hours}</p>
               </div>
               <button 

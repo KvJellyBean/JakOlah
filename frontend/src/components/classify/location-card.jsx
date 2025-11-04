@@ -27,6 +27,11 @@ const LocationCard = ({
   const markerColor = color || "#10b981";
   const badgeBgColor = lightenColor(markerColor);
 
+  // Customize waste types display for Mesin Daur Ulang
+  const displayWasteTypes = type === "Mesin Daur Ulang" 
+    ? ["Anorganik (Botol Plastik)"]
+    : wasteTypes;
+
   return (
     <div
       className={`p-3 md:p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow ${className}`}
@@ -64,10 +69,10 @@ const LocationCard = ({
           <MapPin className="w-3 md:w-4 h-3 md:h-4" />
           <span>{address}</span>
         </p>
-        {wasteTypes && wasteTypes.length > 0 && (
+        {displayWasteTypes && displayWasteTypes.length > 0 && (
           <p className="flex items-start space-x-2">
             <Recycle className="w-3 md:w-4 h-3 md:h-4 mt-0.5 text-emerald-600" />
-            <span>Menerima: {wasteTypes.join(", ")}</span>
+            <span>Menerima: {displayWasteTypes.join(", ")}</span>
           </p>
         )}
       </div>

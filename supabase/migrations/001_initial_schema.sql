@@ -1,7 +1,7 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "postgis";
 
-CREATE TYPE facility_type AS ENUM ('TPA', 'TPS3R', 'Produk Kreatif', 'Komposting', 'Bank Sampah');
+CREATE TYPE facility_type AS ENUM ('TPA', 'TPS3R', 'Produk Kreatif', 'Komposting', 'Bank Sampah', 'Mesin Daur Ulang');
 CREATE TYPE waste_category_code AS ENUM ('ORG', 'ANO', 'LAI');
 
 CREATE TABLE public.waste_categories (
